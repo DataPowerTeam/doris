@@ -353,6 +353,10 @@ under the License.
                     <id>cloudera-plugins</id>
                     <url>https://repository.cloudera.com/artifactory/ext-release-local</url>
                 </pluginRepository>
+                <pluginRepository>
+                    <id>cloudera-third-party</id>
+                    <url>https://repository.cloudera.com/content/repositories/third-party</url>
+                </pluginRepository>
             </pluginRepositories>
         </profile>
     </profiles>
