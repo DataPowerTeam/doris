@@ -349,6 +349,10 @@ under the License.
                     <id>cloudera-public</id>
                     <url>https://repository.cloudera.com/artifactory/public/</url>
                 </pluginRepository>
+                <pluginRepository>
+                    <id>cloudera-plugins</id>
+                    <url>https://repository.cloudera.com/content/groups/public/</url>
+                </pluginRepository>
             </pluginRepositories>
         </profile>
     </profiles>
