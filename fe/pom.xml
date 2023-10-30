@@ -351,7 +351,7 @@ under the License.
                 </pluginRepository>
                 <pluginRepository>
                     <id>cloudera-plugins</id>
-                    <url>https://repository.cloudera.com/content/groups/public/</url>
+                    <url>https://repository.cloudera.com/artifactory/ext-release-local</url>
                 </pluginRepository>
             </pluginRepositories>
         </profile>
