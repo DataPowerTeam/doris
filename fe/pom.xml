@@ -338,6 +338,10 @@ under the License.
                     <id>cloudera-public</id>
                     <url>https://repository.cloudera.com/artifactory/public/</url>
                 </repository>
+                <repository>
+                    <id>aliyun-repo-spring</id>
+                    <url>https://maven.aliyun.com/repository/spring</url>
+                </repository>
             </repositories>
             <pluginRepositories>
                 <pluginRepository>
@@ -352,10 +356,6 @@ under the License.
                 <pluginRepository>
                     <id>cloudera-plugins</id>
                     <url>https://repository.cloudera.com/artifactory/ext-release-local</url>
-                </pluginRepository>
-                <pluginRepository>
-                    <id>aliyun-repo-spring</id>
-                    <url>https://maven.aliyun.com/repository/spring</url>
                 </pluginRepository>
             </pluginRepositories>
         </profile>
