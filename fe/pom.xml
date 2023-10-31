@@ -342,6 +342,10 @@ under the License.
                     <id>aliyun-repo-spring</id>
                     <url>https://maven.aliyun.com/repository/spring</url>
                 </repository>
+                <repository>
+                    <id>cloudera-libs-release-local</id>
+                    <url>https://repository.cloudera.com/repository/libs-release-local/</url>
+                </repository>
             </repositories>
             <pluginRepositories>
                 <pluginRepository>
