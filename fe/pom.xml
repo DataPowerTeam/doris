@@ -337,6 +337,14 @@ under the License.
                     <id>cloudera-public</id>
                     <url>https://repository.cloudera.com/artifactory/public/</url>
                 </repository>
+                <repository>
+                    <id>aliyun-repo-spring</id>
+                    <url>https://maven.aliyun.com/repository/spring</url>
+                </repository>
+                <repository>
+                    <id>cloudera-libs-release-local</id>
+                    <url>https://repository.cloudera.com/repository/libs-release-local/</url>
+                </repository>
             </repositories>
             <pluginRepositories>
                 <pluginRepository>
@@ -347,6 +355,10 @@ under the License.
                 <pluginRepository>
                     <id>cloudera-public</id>
                     <url>https://repository.cloudera.com/artifactory/public/</url>
+                </pluginRepository>
+                <pluginRepository>
+                    <id>cloudera-plugins</id>
+                    <url>https://repository.cloudera.com/artifactory/ext-release-local</url>
                 </pluginRepository>
             </pluginRepositories>
         </profile>
@@ -1466,15 +1478,15 @@ under the License.
             </plugin>
         </plugins>
     </reporting>
-    <repositories>
-        <!--todo waiting hive-catalog release-->
-        <repository>
-            <id>snapshots</id>
-            <name>apache snapshots maven repo https</name>
-            <url>https://repository.apache.org/content/repositories/snapshots/</url>
-            <snapshots>
-                <updatePolicy>always</updatePolicy>
-            </snapshots>
-        </repository>
-    </repositories>
+<!--    <repositories>-->
+<!--        &lt;!&ndash;todo waiting hive-catalog release&ndash;&gt;-->
+<!--        <repository>-->
+<!--            <id>snapshots</id>-->
+<!--            <name>apache snapshots maven repo https</name>-->
+<!--            <url>https://repository.apache.org/content/repositories/snapshots/</url>-->
+<!--            <snapshots>-->
+<!--                <updatePolicy>always</updatePolicy>-->
+<!--            </snapshots>-->
+<!--        </repository>-->
+<!--    </repositories>-->
 </project>

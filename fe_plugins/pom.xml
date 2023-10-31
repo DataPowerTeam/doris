@@ -110,6 +110,10 @@ under the License.
                     <id>cloudera-public</id>
                     <url>https://repository.cloudera.com/artifactory/public/</url>
                 </repository>
+                <repository>
+                    <id>cloudera-libs-release-local</id>
+                    <url>https://repository.cloudera.com/repository/libs-release-local/</url>
+                </repository>
             </repositories>
         </profile>
     </profiles>
