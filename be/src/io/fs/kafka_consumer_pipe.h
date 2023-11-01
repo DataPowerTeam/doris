@@ -43,5 +43,8 @@ public:
         return append_and_flush(data, size);
     }
 };
+
+using PulsarConsumerPipe = KafkaConsumerPipe;
+
 } // namespace io
 } // end namespace doris

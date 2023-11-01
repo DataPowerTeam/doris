@@ -109,6 +109,9 @@ public:
     void get_info(google::protobuf::RpcController* controller, const PProxyRequest* request,
                   PProxyResult* response, google::protobuf::Closure* done) override;
 
+    void get_pulsar_info(google::protobuf::RpcController* controller, const PPulsarProxyRequest* request,
+                             PPulsarProxyResult* response, google::protobuf::Closure* done) override;
+
     void update_cache(google::protobuf::RpcController* controller,
                       const PUpdateCacheRequest* request, PCacheResponse* response,
                       google::protobuf::Closure* done) override;
