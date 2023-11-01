@@ -40,6 +40,7 @@
 #include "util/byte_buffer.h"
 #include "util/time.h"
 #include "util/uid_util.h"
+#include "pulsar/Client.h"
 
 namespace doris {
 namespace io {

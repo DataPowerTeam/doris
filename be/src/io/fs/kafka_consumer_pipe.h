@@ -18,6 +18,7 @@
 #pragma once
 
 #include "io/fs/stream_load_pipe.h"
+#include "pulsar/Client.h"
 
 namespace doris {
 namespace io {
