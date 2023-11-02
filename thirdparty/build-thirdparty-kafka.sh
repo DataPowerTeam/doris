@@ -338,66 +338,7 @@ build_librdkafka() {
 
 if [[ "${#packages[@]}" -eq 0 ]]; then
     packages=(
-        libunixodbc
-        openssl
-        libevent
-        zlib
-        lz4
-        bzip
-        lzo2
-        zstd
-        boost # must before thrift
-        abseil
-        gflags
-        gtest
-        glog
-        protobuf # after gtest
-        rapidjson
-        snappy
-        gperftools
-        curl
-        re2
-        hyperscan
-        thrift
-        leveldb
-        brpc
-        jemalloc
-        rocksdb
-        krb5 # before cyrus_sasl
-        cyrus_sasl
         librdkafka
-        flatbuffers
-        orc
-        cares
-        grpc # after cares, protobuf
-        arrow
-        s2
-        bitshuffle
-        croaringbitmap
-        fmt
-        parallel_hashmap
-        pdqsort
-        libdivide
-        cctz
-        tsan_header
-        mysql
-        aws_sdk
-        js_and_css
-        lzma
-        xml2
-        idn
-        gsasl
-        hdfs3
-        benchmark
-        simdjson
-        nlohmann_json
-        opentelemetry
-        libbacktrace
-        sse2neon
-        xxhash
-        concurrentqueue
-        fast_float
-        libunwind
     )
     if [[ "$(uname -s)" == 'Darwin' ]]; then
         read -r -a packages <<<"binutils gettext ${packages[*]}"
