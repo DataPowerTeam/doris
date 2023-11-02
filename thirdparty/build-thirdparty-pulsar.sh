@@ -337,21 +337,20 @@ build_librdkafka() {
 
 # pulsar
 build_pulsar() {
-    check_if_source_exist $PULSAR_SOURCE
+    check_if_source_exist "${PULSAR_SOURCE}"
 
-    cd $TP_SOURCE_DIR/$PULSAR_SOURCE
+    cd "${TP_SOURCE_DIR}"/"${PULSAR_SOURCE}"
 
-    $CMAKE_CMD -DCMAKE_LIBRARY_PATH=$TP_INSTALL_DIR/lib -DCMAKE_INCLUDE_PATH=$TP_INSTALL_DIR/include \
-        -DPROTOC_PATH=$TP_INSTALL_DIR/bin/protoc -DBUILD_TESTS=OFF -DBUILD_PYTHON_WRAPPER=OFF -DBUILD_DYNAMIC_LIB=OFF .
-    ${BUILD_SYSTEM} -j$PARALLEL
+    "${CMAKE_CMD}" -DCMAKE_LIBRARY_PATH="${TP_INSTALL_DIR}"/lib -DCMAKE_INCLUDE_PATH="${TP_INSTALL_DIR}"/include \
+        -DPROTOC_PATH="${TP_INSTALL_DIR}"/bin/protoc -DBUILD_TESTS=OFF -DBUILD_PYTHON_WRAPPER=OFF -DBUILD_DYNAMIC_LIB=OFF .
+    make -j "${PARALLEL}"
 
-    cp lib/libpulsar.a $TP_INSTALL_DIR/lib/
-    cp -r include/pulsar $TP_INSTALL_DIR/include/
+    cp lib/libpulsar.a "${TP_INSTALL_DIR}"/lib/
+    cp -r include/pulsar "${TP_INSTALL_DIR}"/include/
 }
 
 if [[ "${#packages[@]}" -eq 0 ]]; then
     packages=(
-        librdkafka
         pulsar
     )
     if [[ "$(uname -s)" == 'Darwin' ]]; then
