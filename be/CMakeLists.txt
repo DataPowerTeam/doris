@@ -717,6 +717,10 @@ if (ENABLE_PCH)
     endif()
 endif()
 
+add_library(libpulsar STATIC IMPORTED)
+set_target_properties(libpulsar PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libpulsar.a)
+
+
 function(pch_reuse target)
     if (ENABLE_PCH)
         target_precompile_headers(${target} REUSE_FROM pch)
