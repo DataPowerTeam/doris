@@ -312,6 +312,47 @@ strip_lib() {
     fi
 }
 
+
+# krb5
+build_krb5() {
+    check_if_source_exist "${KRB5_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${KRB5_SOURCE}/src"
+
+    mkdir -p "${BUILD_DIR}"
+    cd "${BUILD_DIR}"
+
+    if [[ "${KERNEL}" == 'Darwin' ]]; then
+        with_crypto_impl='--with-crypto-impl=openssl'
+    fi
+
+    CFLAGS="-fcommon -fPIC -I${TP_INSTALL_DIR}/include" LDFLAGS="-L${TP_INSTALL_DIR}/lib" \
+        ../configure --prefix="${TP_INSTALL_DIR}" --disable-shared --enable-static \
+        --without-keyutils ${with_crypto_impl:+${with_crypto_impl}}
+
+    make -j "${PARALLEL}"
+    make install
+}
+
+# cyrus_sasl
+build_cyrus_sasl() {
+    check_if_source_exist "${CYRUS_SASL_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${CYRUS_SASL_SOURCE}"
+
+    CFLAGS="-fPIC -Wno-implicit-function-declaration" \
+        CPPFLAGS="-I${TP_INCLUDE_DIR}" \
+        LDFLAGS="-L${TP_LIB_DIR}" \
+        LIBS="-lcrypto" \
+        ./configure --prefix="${TP_INSTALL_DIR}" --enable-static --enable-shared=no --with-openssl="${TP_INSTALL_DIR}" --with-pic --enable-gssapi="${TP_INSTALL_DIR}" --with-gss_impl=mit --with-dblib=none
+
+    if [[ "${KERNEL}" != 'Darwin' ]]; then
+        make -j "${PARALLEL}"
+        make install
+    else
+        make -j "${PARALLEL}"
+        make framedir="${TP_INCLUDE_DIR}/sasl" install
+    fi
+}
+
 # librdkafka
 build_librdkafka() {
     check_if_source_exist "${LIBRDKAFKA_SOURCE}"
@@ -338,6 +379,8 @@ build_librdkafka() {
 
 if [[ "${#packages[@]}" -eq 0 ]]; then
     packages=(
+        krb5 # before cyrus_sasl
+        cyrus_sasl
         librdkafka
     )
     if [[ "$(uname -s)" == 'Darwin' ]]; then
