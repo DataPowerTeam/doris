@@ -430,7 +430,7 @@ message PPulsarBacklogBatchProxyResult {
 }
 
 message PPulsarProxyResult {
-  required StatusPB status = 1;
+  required PStatus status = 1;
   optional PPulsarMetaProxyResult pulsar_meta_result = 2;
   optional PPulsarBacklogProxyResult pulsar_backlog_result = 101;
   optional PPulsarBacklogBatchProxyResult pulsar_backlog_batch_result = 102;
