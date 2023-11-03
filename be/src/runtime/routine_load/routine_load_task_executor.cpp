@@ -179,9 +179,9 @@ Status RoutineLoadTaskExecutor::get_pulsar_partition_meta(const PPulsarMetaProxy
 
     // This context is meaningless, just for unifing the interface
     std::shared_ptr<StreamLoadContext> ctx = std::make_shared<StreamLoadContext>(_exec_env);
-    ctx.load_type = TLoadType::ROUTINE_LOAD;
-    ctx.load_src_type = TLoadSourceType::PULSAR;
-    ctx.label = "NaN";
+    ctx->load_type = TLoadType::ROUTINE_LOAD;
+    ctx->load_src_type = TLoadSourceType::PULSAR;
+    ctx->label = "NaN";
 
     // convert PPulsarInfo to TPulsarLoadInfo
     TPulsarLoadInfo t_info;
@@ -195,11 +195,11 @@ Status RoutineLoadTaskExecutor::get_pulsar_partition_meta(const PPulsarMetaProxy
     }
     t_info.__set_properties(properties);
 
-    ctx.pulsar_info = std::make_unique<PulsarLoadInfo>(t_info);
-    ctx.need_rollback = false;
+    ctx->pulsar_info = std::make_unique<PulsarLoadInfo>(t_info);
+    ctx->need_rollback = false;
 
     std::shared_ptr<DataConsumer> consumer;
-    RETURN_IF_ERROR(_data_consumer_pool.get_consumer(&ctx, &consumer));
+    RETURN_IF_ERROR(_data_consumer_pool.get_consumer(ctx, &consumer));
 
     Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_topic_partition(partitions);
     if (st.ok()) {
@@ -214,9 +214,9 @@ Status RoutineLoadTaskExecutor::get_pulsar_partition_backlog(const PPulsarBacklo
 
     // This context is meaningless, just for unifing the interface
     std::shared_ptr<StreamLoadContext> ctx = std::make_shared<StreamLoadContext>(_exec_env);
-    ctx.load_type = TLoadType::ROUTINE_LOAD;
-    ctx.load_src_type = TLoadSourceType::PULSAR;
-    ctx.label = "NaN";
+    ctx->load_type = TLoadType::ROUTINE_LOAD;
+    ctx->load_src_type = TLoadSourceType::PULSAR;
+    ctx->label = "NaN";
 
     // convert PPulsarInfo to TPulsarLoadInfo
     TPulsarLoadInfo t_info;
@@ -230,8 +230,8 @@ Status RoutineLoadTaskExecutor::get_pulsar_partition_backlog(const PPulsarBacklo
     }
     t_info.__set_properties(properties);
 
-    ctx.pulsar_info = std::make_unique<PulsarLoadInfo>(t_info);
-    ctx.need_rollback = false;
+    ctx->pulsar_info = std::make_unique<PulsarLoadInfo>(t_info);
+    ctx->need_rollback = false;
 
     // convert pb repeated value to vector
     std::vector<std::string> partitions;
@@ -244,10 +244,10 @@ Status RoutineLoadTaskExecutor::get_pulsar_partition_backlog(const PPulsarBacklo
 
     Status st;
     std::shared_ptr<DataConsumer> consumer;
-    RETURN_IF_ERROR(_data_consumer_pool.get_consumer(&ctx, &consumer));
+    RETURN_IF_ERROR(_data_consumer_pool.get_consumer(ctx, &consumer));
     for (auto p : partitions) {
         int64_t backlog = 0;
-        RETURN_IF_ERROR(std::static_pointer_cast<PulsarDataConsumer>(consumer)->assign_partition(p, &ctx));
+        RETURN_IF_ERROR(std::static_pointer_cast<PulsarDataConsumer>(consumer)->assign_partition(p, ctx));
         st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition_backlog(&backlog);
         std::static_pointer_cast<PulsarDataConsumer>(consumer).reset();
         backlog_num->push_back(backlog);
@@ -404,7 +404,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         pipe = std::make_shared<io::PulsarConsumerPipe>();
         Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)->assign_topic_partitions(ctx);
         if (!st.ok()) {
-            err_handler(ctx, st, st.get_error_msg());
+            err_handler(ctx, st, st.to_string());
             cb(ctx);
             return;
         }
