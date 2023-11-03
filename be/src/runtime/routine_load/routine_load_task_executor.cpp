@@ -178,7 +178,7 @@ Status RoutineLoadTaskExecutor::get_pulsar_partition_meta(const PPulsarMetaProxy
     DCHECK(request.has_pulsar_info());
 
     // This context is meaningless, just for unifing the interface
-    StreamLoadContext ctx(_exec_env);
+    std::shared_ptr<StreamLoadContext> ctx = std::make_shared<StreamLoadContext>(_exec_env);
     ctx.load_type = TLoadType::ROUTINE_LOAD;
     ctx.load_src_type = TLoadSourceType::PULSAR;
     ctx.label = "NaN";
@@ -213,7 +213,7 @@ Status RoutineLoadTaskExecutor::get_pulsar_partition_backlog(const PPulsarBacklo
     DCHECK(request.has_pulsar_info());
 
     // This context is meaningless, just for unifing the interface
-    StreamLoadContext ctx(_exec_env);
+    std::shared_ptr<StreamLoadContext> ctx = std::make_shared<StreamLoadContext>(_exec_env);
     ctx.load_type = TLoadType::ROUTINE_LOAD;
     ctx.load_src_type = TLoadSourceType::PULSAR;
     ctx.label = "NaN";
@@ -401,7 +401,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        pipe = std::make_shared<PulsarConsumerPipe>();
+        pipe = std::make_shared<io::PulsarConsumerPipe>();
         Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)->assign_topic_partitions(ctx);
         if (!st.ok()) {
             err_handler(ctx, st, st.get_error_msg());
@@ -502,7 +502,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
             if (!st.ok()) {
                 // Pulsar Offset Acknowledgement is idempotent, Failure should not block the normal process
                 // So just print a warning
-                LOG(WARNING) << st.get_error_msg();
+                LOG(WARNING) << st;
                 break;
             }
 
@@ -511,7 +511,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
             if (!st.ok()) {
                 // Pulsar Offset Acknowledgement is idempotent, Failure should not block the normal process
                 // So just print a warning
-                LOG(WARNING) << st.get_error_msg();
+                LOG(WARNING) << st;
             }
 
             // do ack
@@ -519,7 +519,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
             if (!st.ok()) {
                 // Pulsar Offset Acknowledgement is idempotent, Failure should not block the normal process
                 // So just print a warning
-                LOG(WARNING) << st.get_error_msg();
+                LOG(WARNING) << st;
             }
 
             // return consumer

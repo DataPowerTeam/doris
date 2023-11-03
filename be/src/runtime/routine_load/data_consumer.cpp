@@ -512,7 +512,7 @@ Status PulsarDataConsumer::assign_partition(const std::string& partition, std::s
     return Status::OK();
 }
 
-Status PulsarDataConsumer::group_consume(TimedBlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms) {
+Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms) {
     _last_visit_time = time(nullptr);
     int64_t left_time = max_running_time_ms;
     LOG(INFO) << "start pulsar consumer: " << _id << ", grp: " << _grp_id << ", max running time(ms): " << left_time;

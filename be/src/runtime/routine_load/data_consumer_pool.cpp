@@ -122,7 +122,7 @@ Status DataConsumerPool::get_consumer_grp(std::shared_ptr<StreamLoadContext> ctx
         }
         size_t consumer_num = ctx->pulsar_info->partitions.size();
 
-        std::shared_ptr<PulsarDataConsumerGroup> grp = std::make_shared<PulsarDataConsumerGroup>(consumer_num);
+        std::shared_ptr<PulsarDataConsumerGroup> grp = std::make_shared<PulsarDataConsumerGroup>();
 
         for (int i = 0; i < consumer_num; ++i) {
           std::shared_ptr<DataConsumer> consumer;
