@@ -193,7 +193,7 @@ void offer_failed(T* response, google::protobuf::Closure* done, const FifoThread
 }
 
 template <typename T>
-void PInternalServiceImplBase<T>::get_pulsar_info(google::protobuf::RpcController* controller,
+void PInternalServiceImpl::get_pulsar_info(google::protobuf::RpcController* controller,
                                                   const PPulsarProxyRequest* request, PPulsarProxyResult* response,
                                                   google::protobuf::Closure* done) {
     ClosureGuard closure_guard(done);
@@ -222,7 +222,7 @@ void PInternalServiceImplBase<T>::get_pulsar_info(google::protobuf::RpcControlle
 }
 
 template <typename T>
-void PInternalServiceImplBase<T>::_get_pulsar_info_impl(
+void PInternalServiceImpl::_get_pulsar_info_impl(
         const PPulsarProxyRequest* request, PPulsarProxyResult* response,
         GenericCountDownLatch<bthread::Mutex, bthread::ConditionVariable>* latch, int timeout_ms) {
     DeferOp defer([latch] { latch->count_down(); });
