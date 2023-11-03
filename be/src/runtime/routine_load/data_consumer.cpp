@@ -40,7 +40,6 @@
 #include "util/stopwatch.hpp"
 #include "util/string_util.h"
 #include "util/uid_util.h"
-#include "pulsar/Client.h"
 
 namespace doris {
 

@@ -19,6 +19,7 @@
 
 #include "io/fs/stream_load_pipe.h"
 #include "pulsar/Client.h"
+#include "pulsar/Consumer.h"
 
 namespace doris {
 namespace io {

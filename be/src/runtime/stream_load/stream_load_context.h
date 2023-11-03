@@ -41,6 +41,7 @@
 #include "util/time.h"
 #include "util/uid_util.h"
 #include "pulsar/Client.h"
+#include "pulsar/Consumer.h"
 
 namespace doris {
 namespace io {
