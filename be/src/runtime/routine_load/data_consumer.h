@@ -34,6 +34,7 @@
 #include "runtime/stream_load/stream_load_context.h"
 #include "util/uid_util.h"
 #include "pulsar/Client.h"
+#include "io/fs/kafka_consumer_pipe.h"
 
 namespace doris {
 
@@ -168,7 +169,7 @@ private:
 
 class PulsarDataConsumer : public DataConsumer {
 public:
-    PulsarDataConsumer(StreamLoadContext* ctx)
+    PulsarDataConsumer(std::shared_ptr<StreamLoadContext> ctx)
             : DataConsumer(),
               _service_url(ctx->pulsar_info->service_url),
               _topic(ctx->pulsar_info->topic),
@@ -185,19 +186,19 @@ public:
 
     enum InitialPosition { LATEST, EARLIEST };
 
-    Status init(StreamLoadContext* ctx) override;
-    Status assign_partition(const std::string& partition, StreamLoadContext* ctx, int64_t initial_position = -1);
+    Status init(std::shared_ptr<StreamLoadContext> ctx) override;
+    Status assign_partition(const std::string& partition, std::shared_ptr<StreamLoadContext> ctx, int64_t initial_position = -1);
     // TODO(cmy): currently do not implement single consumer start method, using group_consume
-    Status consume(StreamLoadContext* ctx) override { return Status::OK(); }
-    Status cancel(StreamLoadContext* ctx) override;
+    Status consume(std::shared_ptr<StreamLoadContext> ctx) override { return Status::OK(); }
+    Status cancel(std::shared_ptr<StreamLoadContext> ctx) override;
     // reassign partition topics
     Status reset() override;
-    bool match(StreamLoadContext* ctx) override;
+    bool match(std::shared_ptr<StreamLoadContext> ctx) override;
     // acknowledge pulsar message
     Status acknowledge_cumulative(pulsar::MessageId& message_id);
 
     // start the consumer and put msgs to queue
-    Status group_consume(TimedBlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms);
+    Status group_consume(BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms);
 
     // get the partitions of the topic
     Status get_topic_partition(std::vector<std::string>* partitions);

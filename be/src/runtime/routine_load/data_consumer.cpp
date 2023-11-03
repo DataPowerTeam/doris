@@ -453,7 +453,7 @@ bool KafkaDataConsumer::match(std::shared_ptr<StreamLoadContext> ctx) {
 }
 
 // init pulsar consumer will only set common configs
-Status PulsarDataConsumer::init(StreamLoadContext* ctx) {
+Status PulsarDataConsumer::init(std::shared_ptr<StreamLoadContext> ctx) {
     std::unique_lock<std::mutex> l(_lock);
     if (_init) {
         // this consumer has already been initialized.
@@ -479,7 +479,7 @@ Status PulsarDataConsumer::init(StreamLoadContext* ctx) {
     return Status::OK();
 }
 
-Status PulsarDataConsumer::assign_partition(const std::string& partition, StreamLoadContext* ctx,
+Status PulsarDataConsumer::assign_partition(const std::string& partition, std::shared_ptr<StreamLoadContext> ctx,
                                             int64_t initial_position) {
     DCHECK(_p_client);
 
@@ -613,7 +613,7 @@ Status PulsarDataConsumer::get_topic_partition(std::vector<std::string>* partiti
     return Status::OK();
 }
 
-Status PulsarDataConsumer::cancel(StreamLoadContext* ctx) {
+Status PulsarDataConsumer::cancel(std::shared_ptr<StreamLoadContext> ctx) {
     std::unique_lock<std::mutex> l(_lock);
     if (!_init) {
         return Status::InternalError("consumer is not initialized");
@@ -641,7 +641,7 @@ Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id)
     return Status::OK();
 }
 
-bool PulsarDataConsumer::match(StreamLoadContext* ctx) {
+bool PulsarDataConsumer::match(std::shared_ptr<StreamLoadContext> ctx) {
     if (ctx->load_src_type != TLoadSourceType::PULSAR) {
         return false;
     }

@@ -100,24 +100,24 @@ private:
 // for pulsar
 class PulsarDataConsumerGroup : public DataConsumerGroup {
 public:
-    PulsarDataConsumerGroup(size_t sz) : DataConsumerGroup(sz), _queue(500) {}
+    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(500) {}
 
     ~PulsarDataConsumerGroup() override;
 
-    Status start_all(StreamLoadContext* ctx) override;
+    Status start_all(std::shared_ptr<StreamLoadContext> ctx) override;
     // assign topic partitions to all consumers equally
-    Status assign_topic_partitions(StreamLoadContext* ctx);
+    Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
 
 private:
     // start a single consumer
-    void actual_consume(const std::shared_ptr<DataConsumer>& consumer, TimedBlockingQueue<pulsar::Message*>* queue,
+    void actual_consume(const std::shared_ptr<DataConsumer>& consumer, BlockingQueue<pulsar::Message*>* queue,
                         int64_t max_running_time_ms, const ConsumeFinishCallback& cb);
 
-    void get_backlog_nums(StreamLoadContext* ctx);
+    void get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx);
 
 private:
     // blocking queue to receive msgs from all consumers
-    TimedBlockingQueue<pulsar::Message*> _queue;
+    BlockingQueue<pulsar::Message*> _queue;
 };
 
 } // end namespace doris

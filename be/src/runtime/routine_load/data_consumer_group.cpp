@@ -204,7 +204,7 @@ void KafkaDataConsumerGroup::actual_consume(std::shared_ptr<DataConsumer> consum
     cb(st);
 }
 
-Status PulsarDataConsumerGroup::assign_topic_partitions(StreamLoadContext* ctx) {
+Status PulsarDataConsumerGroup::assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx) {
     DCHECK(ctx->pulsar_info);
     DCHECK(_consumers.size() >= 1);
     // Cumulative acknowledgement when consuming partitioned topics is not supported by pulsar
@@ -241,7 +241,7 @@ PulsarDataConsumerGroup::~PulsarDataConsumerGroup() {
     DCHECK(_queue.get_size() == 0);
 }
 
-Status PulsarDataConsumerGroup::start_all(StreamLoadContext* ctx) {
+Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx) {
     Status result_st = Status::OK();
     // start all consumers
     for (auto& consumer : _consumers) {
@@ -280,21 +280,11 @@ Status PulsarDataConsumerGroup::start_all(StreamLoadContext* ctx) {
     std::map<std::string, pulsar::MessageId> ack_offset = ctx->pulsar_info->ack_offset;
 
     //improve performance
-    Status (io::PulsarConsumerPipe::*append_data)(const char* data, size_t size, char row_delimiter);
-    char row_delimiter = '\n';
+    Status (io::PulsarConsumerPipe::*append_data)(const char* data, size_t size);
     if (ctx->format == TFileFormatType::FORMAT_JSON) {
         append_data = &io::PulsarConsumerPipe::append_json;
     } else {
         append_data = &io::PulsarConsumerPipe::append_with_line_delimiter;
-        auto& per_node_scan_ranges = ctx->put_result.params.params.per_node_scan_ranges;
-
-        if (!per_node_scan_ranges.empty()) {
-            DCHECK_GE(per_node_scan_ranges.begin()->second.size(), 1);
-
-            auto& scan_range = per_node_scan_ranges.begin()->second[0].scan_range;
-            auto& params = scan_range.broker_scan_range.params;
-            row_delimiter = static_cast<char>(params.row_delimiter);
-        }
     }
 
     MonotonicStopWatch watch;
@@ -328,8 +318,8 @@ Status PulsarDataConsumerGroup::start_all(StreamLoadContext* ctx) {
             if (left_bytes == ctx->max_batch_size) {
                 // nothing to be consumed, we have to cancel it, because
                 // we do not allow finishing stream load pipe without data
-                pulsar_pipe->cancel(Status::Cancelled("Cancelled"));
-                return Status::Cancelled("Cancelled");
+                pulsar_pipe->cancel("Cancelled");
+                return Status::InternalError("Cancelled");
             } else {
                 DCHECK(left_bytes < ctx->max_batch_size);
                 pulsar_pipe->finish();
@@ -360,7 +350,7 @@ Status PulsarDataConsumerGroup::start_all(StreamLoadContext* ctx) {
                 VLOG(3) << "consume partition" << partition << " - " << msg_id;
             } else {
                 // failed to append this msg, we must stop
-                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg=" << st.get_error_msg();
+                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg=" << st.to_string();
                 eos = true;
                 {
                     std::unique_lock<std::mutex> lock(_mutex);
@@ -382,19 +372,19 @@ Status PulsarDataConsumerGroup::start_all(StreamLoadContext* ctx) {
 }
 
 void PulsarDataConsumerGroup::actual_consume(const std::shared_ptr<DataConsumer>& consumer,
-                                             TimedBlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms,
+                                             BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms,
                                              const ConsumeFinishCallback& cb) {
     Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->group_consume(queue, max_running_time_ms);
     cb(st);
 }
 
-void PulsarDataConsumerGroup::get_backlog_nums(StreamLoadContext* ctx) {
+void PulsarDataConsumerGroup::get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx) {
     for (auto& consumer : _consumers) {
         // get backlog num
         int64_t backlog_num;
         Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition_backlog(&backlog_num);
         if (!st.ok()) {
-            LOG(WARNING) << st.get_error_msg();
+            LOG(WARNING) << st.to_string();
         } else {
             ctx->pulsar_info
                     ->partition_backlog[std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition()] =
