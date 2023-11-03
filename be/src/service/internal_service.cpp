@@ -889,12 +889,12 @@ void PInternalServiceImpl::get_pulsar_info(google::protobuf::RpcController* cont
         this->_get_pulsar_info_impl(request, response, done, timeout_ms);
     };
 
-    auto st = _exec_env->load_rpc_pool()->submit_func(std::move(task));
+    auto st = _exec_env->send_batch_thread_pool()->submit_func(std::move(task));
     if (!st.ok()) {
         LOG(WARNING) << "get pulsar info: " << st << " ,timeout: " << timeout_ms
-                     << ", thread pool size: " << _exec_env->load_rpc_pool()->num_threads();
+                     << ", thread pool size: " << _exec_env->send_batch_thread_pool()->num_threads();
         brpc::ClosureGuard closure_guard(done);
-        Status::ServiceUnavailable(fmt::format("too busy to get pulsar info, please check the pulsar status, "
+        Status::Error<ErrorCode::SERVICE_UNAVAILABLE>(fmt::format("too busy to get pulsar info, please check the pulsar status, "
                                                "timeout ms: {}",
                                                timeout_ms))
                 .to_protobuf(response->mutable_status());
