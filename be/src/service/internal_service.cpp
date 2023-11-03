@@ -192,94 +192,6 @@ void offer_failed(T* response, google::protobuf::Closure* done, const FifoThread
     LOG(WARNING) << "fail to offer request to the work pool, pool=" << pool.get_info();
 }
 
-template <typename T>
-void PInternalServiceImpl::get_pulsar_info(google::protobuf::RpcController* controller,
-                                                  const PPulsarProxyRequest* request, PPulsarProxyResult* response,
-                                                  google::protobuf::Closure* done) {
-    ClosureGuard closure_guard(done);
-
-    GenericCountDownLatch<bthread::Mutex, bthread::ConditionVariable> latch(1);
-
-    int timeout_ms =
-            request->has_timeout() ? request->timeout() * 1000 : config::routine_load_pulsar_timeout_second * 1000;
-
-    // watch estimates the interval before the task is actually executed.
-    MonotonicStopWatch watch;
-    watch.start();
-
-    if (!_async_thread_pool.try_offer([&]() {
-            timeout_ms -= watch.elapsed_time() / 1000 / 1000;
-            _get_pulsar_info_impl(request, response, &latch, timeout_ms);
-        })) {
-        Status::ServiceUnavailable(
-                "too busy to get pulsar info, please check the pulsar service status, or set "
-                "internal_service_async_thread_num bigger")
-                .to_protobuf(response->mutable_status());
-        return;
-    }
-
-    latch.wait();
-}
-
-template <typename T>
-void PInternalServiceImpl::_get_pulsar_info_impl(
-        const PPulsarProxyRequest* request, PPulsarProxyResult* response,
-        GenericCountDownLatch<bthread::Mutex, bthread::ConditionVariable>* latch, int timeout_ms) {
-    DeferOp defer([latch] { latch->count_down(); });
-
-    if (timeout_ms <= 0) {
-        Status::TimedOut("get pulsar info timeout").to_protobuf(response->mutable_status());
-        return;
-    }
-
-    if (request->has_pulsar_meta_request()) {
-        std::vector<std::string> partitions;
-        Status st = _exec_env->routine_load_task_executor()->get_pulsar_partition_meta(request->pulsar_meta_request(),
-                                                                                       &partitions);
-        if (st.ok()) {
-            PPulsarMetaProxyResult* pulsar_result = response->mutable_pulsar_meta_result();
-            for (std::string p : partitions) {
-                pulsar_result->add_partitions(p);
-            }
-        }
-        st.to_protobuf(response->mutable_status());
-        return;
-    }
-    if (request->has_pulsar_backlog_request()) {
-        std::vector<int64_t> backlog_nums;
-        Status st = _exec_env->routine_load_task_executor()->get_pulsar_partition_backlog(
-                request->pulsar_backlog_request(), &backlog_nums);
-        if (st.ok()) {
-            auto result = response->mutable_pulsar_backlog_result();
-            for (int i = 0; i < backlog_nums.size(); i++) {
-                result->add_partitions(request->pulsar_backlog_request().partitions(i));
-                result->add_backlog_nums(backlog_nums[i]);
-            }
-        }
-        st.to_protobuf(response->mutable_status());
-        return;
-    }
-    if (request->has_pulsar_backlog_batch_request()) {
-        for (auto backlog_req : request->pulsar_backlog_batch_request().requests()) {
-            std::vector<int64_t> backlog_nums;
-            Status st =
-                    _exec_env->routine_load_task_executor()->get_pulsar_partition_backlog(backlog_req, &backlog_nums);
-            auto backlog_result = response->mutable_pulsar_backlog_batch_result()->add_results();
-            if (st.ok()) {
-                for (int i = 0; i < backlog_nums.size(); i++) {
-                    backlog_result->add_partitions(backlog_req.partitions(i));
-                    backlog_result->add_backlog_nums(backlog_nums[i]);
-                }
-            } else {
-                response->clear_pulsar_backlog_batch_result();
-                st.to_protobuf(response->mutable_status());
-                return;
-            }
-        }
-    }
-    Status::OK().to_protobuf(response->mutable_status());
-}
-
 PInternalServiceImpl::PInternalServiceImpl(ExecEnv* exec_env)
         : _exec_env(exec_env),
           _heavy_work_pool(config::brpc_heavy_work_pool_threads != -1
@@ -966,6 +878,87 @@ void PInternalServiceImpl::get_info(google::protobuf::RpcController* controller,
         return;
     }
 }
+
+void PInternalServiceImplBase<T>::get_pulsar_info(google::protobuf::RpcController* controller,
+                                                  const PPulsarProxyRequest* request, PPulsarProxyResult* response,
+                                                  google::protobuf::Closure* done) {
+    int timeout_ms =
+            request->has_timeout() ? request->timeout() * 1000 : config::routine_load_pulsar_timeout_second * 1000;
+
+    auto task = [this, request, response, done, timeout_ms]() {
+        this->_get_pulsar_info_impl(request, response, done, timeout_ms);
+    };
+
+    auto st = _exec_env->load_rpc_pool()->submit_func(std::move(task));
+    if (!st.ok()) {
+        LOG(WARNING) << "get pulsar info: " << st << " ,timeout: " << timeout_ms
+                     << ", thread pool size: " << _exec_env->load_rpc_pool()->num_threads();
+        brpc::ClosureGuard closure_guard(done);
+        Status::ServiceUnavailable(fmt::format("too busy to get pulsar info, please check the pulsar status, "
+                                               "timeout ms: {}",
+                                               timeout_ms))
+                .to_protobuf(response->mutable_status());
+    }
+}
+
+void PInternalServiceImplBase<T>::_get_pulsar_info_impl(const PPulsarProxyRequest* request,
+                                                        PPulsarProxyResult* response, google::protobuf::Closure* done,
+                                                        int timeout_ms) {
+    brpc::ClosureGuard closure_guard(done);
+
+    if (timeout_ms <= 0) {
+        Status::TimedOut("get pulsar info timeout").to_protobuf(response->mutable_status());
+        return;
+    }
+
+    if (request->has_pulsar_meta_request()) {
+        std::vector<std::string> partitions;
+        Status st = _exec_env->routine_load_task_executor()->get_pulsar_partition_meta(request->pulsar_meta_request(),
+                                                                                       &partitions);
+        if (st.ok()) {
+            PPulsarMetaProxyResult* pulsar_result = response->mutable_pulsar_meta_result();
+            for (const std::string& p : partitions) {
+                pulsar_result->add_partitions(p);
+            }
+        }
+        st.to_protobuf(response->mutable_status());
+        return;
+    }
+    if (request->has_pulsar_backlog_request()) {
+        std::vector<int64_t> backlog_nums;
+        Status st = _exec_env->routine_load_task_executor()->get_pulsar_partition_backlog(
+                request->pulsar_backlog_request(), &backlog_nums);
+        if (st.ok()) {
+            auto result = response->mutable_pulsar_backlog_result();
+            for (int i = 0; i < backlog_nums.size(); i++) {
+                result->add_partitions(request->pulsar_backlog_request().partitions(i));
+                result->add_backlog_nums(backlog_nums[i]);
+            }
+        }
+        st.to_protobuf(response->mutable_status());
+        return;
+    }
+    if (request->has_pulsar_backlog_batch_request()) {
+        for (const auto& backlog_req : request->pulsar_backlog_batch_request().requests()) {
+            std::vector<int64_t> backlog_nums;
+            Status st =
+                    _exec_env->routine_load_task_executor()->get_pulsar_partition_backlog(backlog_req, &backlog_nums);
+            auto backlog_result = response->mutable_pulsar_backlog_batch_result()->add_results();
+            if (st.ok()) {
+                for (int i = 0; i < backlog_nums.size(); i++) {
+                    backlog_result->add_partitions(backlog_req.partitions(i));
+                    backlog_result->add_backlog_nums(backlog_nums[i]);
+                }
+            } else {
+                response->clear_pulsar_backlog_batch_result();
+                st.to_protobuf(response->mutable_status());
+                return;
+            }
+        }
+    }
+    Status::OK().to_protobuf(response->mutable_status());
+}
+
 
 void PInternalServiceImpl::update_cache(google::protobuf::RpcController* controller,
                                         const PUpdateCacheRequest* request,

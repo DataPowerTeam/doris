@@ -112,6 +112,9 @@ public:
     void get_pulsar_info(google::protobuf::RpcController* controller, const PPulsarProxyRequest* request,
                              PPulsarProxyResult* response, google::protobuf::Closure* done) override;
 
+    void _get_pulsar_info_impl(const PPulsarProxyRequest* request, PPulsarProxyResult* response,
+                                google::protobuf::Closure* done, int timeout_ms);
+
     void update_cache(google::protobuf::RpcController* controller,
                       const PUpdateCacheRequest* request, PCacheResponse* response,
                       google::protobuf::Closure* done) override;
