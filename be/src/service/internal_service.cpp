@@ -879,7 +879,7 @@ void PInternalServiceImpl::get_info(google::protobuf::RpcController* controller,
     }
 }
 
-void PInternalServiceImplBase<T>::get_pulsar_info(google::protobuf::RpcController* controller,
+void PInternalServiceImpl::get_pulsar_info(google::protobuf::RpcController* controller,
                                                   const PPulsarProxyRequest* request, PPulsarProxyResult* response,
                                                   google::protobuf::Closure* done) {
     int timeout_ms =
@@ -901,7 +901,7 @@ void PInternalServiceImplBase<T>::get_pulsar_info(google::protobuf::RpcControlle
     }
 }
 
-void PInternalServiceImplBase<T>::_get_pulsar_info_impl(const PPulsarProxyRequest* request,
+void PInternalServiceImpl::_get_pulsar_info_impl(const PPulsarProxyRequest* request,
                                                         PPulsarProxyResult* response, google::protobuf::Closure* done,
                                                         int timeout_ms) {
     brpc::ClosureGuard closure_guard(done);
