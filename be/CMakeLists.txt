@@ -503,6 +503,11 @@ else()
     add_definitions(-DUSE_LIBHDFS3)
 endif()
 
+add_library(libpulsar STATIC IMPORTED)
+set_target_properties(libpulsar PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libpulsar.a)
+target_link_libraries(test_a util_a)
+
+
 if (absl_FOUND)
     set(COMMON_THIRDPARTY
         ${COMMON_THIRDPARTY}
@@ -665,6 +670,7 @@ set (TEST_LINK_LIBS ${DORIS_LINK_LIBS}
     ${WL_START_GROUP}
     gmock
     gtest
+    libpulsar
     ${WL_END_GROUP}
 )
 
