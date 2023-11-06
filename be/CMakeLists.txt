@@ -505,7 +505,6 @@ endif()
 
 add_library(libpulsar STATIC IMPORTED)
 set_target_properties(libpulsar PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libpulsar.a)
-target_link_libraries(test_a util_a)
 
 
 if (absl_FOUND)
