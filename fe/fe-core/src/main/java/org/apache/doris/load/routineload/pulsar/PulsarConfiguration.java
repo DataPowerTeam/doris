@@ -17,8 +17,6 @@
 
 package org.apache.doris.load.routineload.pulsar;
 
-import com.google.common.base.Splitter;
-
 import java.util.Arrays;
 import java.util.function.Function;
 import java.util.stream.Collectors;

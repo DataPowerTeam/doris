@@ -17,6 +17,12 @@
 
 package org.apache.doris.load.routineload.pulsar;
 
+import org.apache.doris.common.AnalysisException;
+import org.apache.doris.common.Pair;
+import org.apache.doris.common.UserException;
+import org.apache.doris.load.routineload.AbstractDataSourceProperties;
+import org.apache.doris.load.routineload.LoadDataSourceType;
+
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -24,12 +30,6 @@ import com.google.common.collect.Maps;
 import com.google.gson.annotations.SerializedName;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.doris.common.AnalysisException;
-import org.apache.doris.common.Pair;
-import org.apache.doris.common.UserException;
-import org.apache.doris.load.routineload.AbstractDataSourceProperties;
-import org.apache.doris.load.routineload.LoadDataSourceType;
-import org.apache.doris.load.routineload.kafka.KafkaConfiguration;
 
 import java.util.Arrays;
 import java.util.List;
