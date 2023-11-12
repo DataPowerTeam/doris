@@ -95,8 +95,10 @@ public class PulsarUtil {
             // create request
             InternalService.PPulsarBacklogProxyRequest.Builder backlogRequest =
                     InternalService.PPulsarBacklogProxyRequest.newBuilder()
-                    .setPartitions(partitions)
                     .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, properties));
+            for (String partition : partitions) {
+                backlogRequest.addPartitions(partition);
+            }
             InternalService.PPulsarProxyRequest request = InternalService.PPulsarProxyRequest.newBuilder()
                     .setPulsarBacklogRequest(backlogRequest).build();
 
