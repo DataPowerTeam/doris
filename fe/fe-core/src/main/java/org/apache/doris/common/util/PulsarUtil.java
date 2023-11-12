@@ -56,16 +56,10 @@ public class PulsarUtil {
         return PROXY_API.getBacklogNums(serviceUrl, topic, subscription, properties, partitions);
     }
 
-    public static List<InternalService.PPulsarBacklogProxyResult> getBatchBacklogNums(
-            List<InternalService.PPulsarBacklogProxyRequest> requests)
-            throws UserException {
-        return PROXY_API.getBatchBacklogNums(requests);
-    }
-
     public static InternalService.PPulsarLoadInfo genPPulsarLoadInfo(String serviceUrl,
                                                                      String topic, String subscription,
                                                    ImmutableMap<String, String> properties) {
-        InternalService.PPulsarLoadInfo pulsarLoadInfo = InternalService.PPulsarLoadInfo().newBuilder()
+        InternalService.PPulsarLoadInfo pulsarLoadInfo = InternalService.PPulsarLoadInfo.newBuilder()
                 .setServiceUrl(serviceUrl)
                 .setTopic(topic)
                 .setSubscription(subscription)
@@ -92,11 +86,7 @@ public class PulsarUtil {
                     .setPulsarMetaRequest(metaRequest).build();
 
             InternalService.PPulsarProxyResult result = sendProxyRequest(request);
-            List<String> partitions = new ArrayList<>();
-            for (InternalService.PPulsarMetaProxyResult metaProxyResult : result.getPulsarMetaResult()) {
-                partitions.addAll(metaProxyResult.getPartitions());
-            }
-            return partitions;
+            return result.getPulsarMetaResult(0).getPartitions();
         }
 
         public Map<String, Long> getBacklogNums(String serviceUrl, String topic, String subscription,
@@ -115,32 +105,11 @@ public class PulsarUtil {
 
             // assembly result
             Map<String, Long> partitionBacklogs = Maps.newHashMapWithExpectedSize(partitions.size());
-            for (InternalService.PPulsarBacklogProxyResult backlogResult : result.getPulsarBacklogResult()) {
-                List<Long> backlogs = backlogResult.getBacklogNums();
-                for (int i = 0; i < backlogResult.getPartitions().size(); i++) {
-                    partitionBacklogs.put(backlogResult.getPartitions().get(i), backlogs.get(i));
-                }
+            List<Long> backlogs = result.getPulsarBacklogResult(0).getBacklogNums();
+            for (int i = 0; i < result.getPulsarBacklogResult(0).getPartitions().size(); i++) {
+                partitionBacklogs.put(result.getPulsarBacklogResult(0).getPartitions().get(i), backlogs.get(i));
             }
             return partitionBacklogs;
-        }
-
-        public List<InternalService.PPulsarBacklogProxyResult> getBatchBacklogNums(
-                List<InternalService.PPulsarBacklogProxyRequest> requests)
-                throws UserException {
-            // create request
-            InternalService.PPulsarBacklogBatchProxyRequest.Builder pPulsarBacklogBatchProxyRequest =
-                    InternalService.PPulsarBacklogBatchProxyRequest.newBuilder().setRequests(requests);
-            InternalService.PPulsarProxyRequest pProxyRequest = InternalService.PPulsarProxyRequest.newBuilder()
-                    .setPulsarBacklogBatchRequest(pPulsarBacklogBatchProxyRequest).build();
-
-            // send request
-            InternalService.PPulsarProxyResult result = sendProxyRequest(pProxyRequest);
-
-            List<InternalService.PPulsarBacklogProxyResult> results = new ArrayList<>();
-            for (InternalService.PPulsarBacklogBatchProxyResult batchResult : result.getPulsarBacklogBatchResult()) {
-                results.addAll(batchResult.getResults());
-            }
-            return results;
         }
 
         private InternalService.PPulsarProxyResult sendProxyRequest(
