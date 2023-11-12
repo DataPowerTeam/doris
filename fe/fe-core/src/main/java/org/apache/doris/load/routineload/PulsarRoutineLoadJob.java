@@ -29,10 +29,10 @@ import org.apache.doris.common.DdlException;
 import org.apache.doris.common.InternalErrorCode;
 import org.apache.doris.common.LoadException;
 import org.apache.doris.common.Pair;
-import org.apache.doris.common.UserException;
 import org.apache.doris.common.ErrorReport;
 import org.apache.doris.common.AnalysisException;
 import org.apache.doris.common.ErrorCode;
+import org.apache.doris.common.UserException;
 import org.apache.doris.common.io.Text;
 import org.apache.doris.common.util.DebugUtil;
 import org.apache.doris.common.util.LogBuilder;
@@ -46,7 +46,6 @@ import org.apache.doris.persist.AlterRoutineLoadJobOperationLog;
 import org.apache.doris.thrift.TFileCompressType;
 import org.apache.doris.transaction.TransactionState;
 import org.apache.doris.transaction.TransactionStatus;
-
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -261,7 +260,7 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
         // have no load data" and abort transaction.
         // In this situation, we also need update commit info.
         if (txnStatusChangeReason != null
-            && txnStatusChangeReason == TransactionState.TxnStatusChangeReason.NO_PARTITIONS) {
+                && txnStatusChangeReason == TransactionState.TxnStatusChangeReason.NO_PARTITIONS) {
             // Because the max_filter_ratio of routine load task is always 1.
             // Therefore, under normal circumstances,
             // routine load task will not return the error "too many filtered rows".

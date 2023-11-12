@@ -57,7 +57,7 @@ public class PulsarUtil {
     }
 
     public static List<InternalService.PPulsarBacklogProxyResult> getBatchBacklogNums(
-        List<PPulsarBacklogProxyRequest> requests)
+            List<PPulsarBacklogProxyRequest> requests)
             throws UserException {
         return PROXY_API.getBatchBacklogNums(requests);
     }
@@ -100,7 +100,7 @@ public class PulsarUtil {
                 throws UserException {
             // create request
             InternalService.PPulsarBacklogProxyRequest backlogRequest =
-                new InternalService.PPulsarBacklogProxyRequest();
+                    new InternalService.PPulsarBacklogProxyRequest();
             backlogRequest.pulsarInfo = genPPulsarLoadInfo(serviceUrl, topic, subscription, properties);
             backlogRequest.partitions = partitions;
             InternalService.PPulsarProxyRequest request = new InternalService.PPulsarProxyRequest();
@@ -119,12 +119,12 @@ public class PulsarUtil {
         }
 
         public List<InternalService.PPulsarBacklogProxyResult> getBatchBacklogNums(
-            List<InternalService.PPulsarBacklogProxyRequest> requests)
+                List<InternalService.PPulsarBacklogProxyRequest> requests)
                 throws UserException {
             // create request
             InternalService.PPulsarProxyRequest pProxyRequest = new InternalService.PPulsarProxyRequest();
             InternalService.PPulsarBacklogBatchProxyRequest pPulsarBacklogBatchProxyRequest =
-                new PPulsarBacklogBatchProxyRequest();
+                    new PPulsarBacklogBatchProxyRequest();
             pPulsarBacklogBatchProxyRequest.requests = requests;
             pProxyRequest.pulsarBacklogBatchRequest = pPulsarBacklogBatchProxyRequest;
 
@@ -135,7 +135,7 @@ public class PulsarUtil {
         }
 
         private InternalService.PPulsarProxyResult sendProxyRequest(
-            InternalService.PPulsarProxyRequest request) throws UserException {
+                InternalService.PPulsarProxyRequest request) throws UserException {
             TNetworkAddress address = new TNetworkAddress();
             try {
                 // TODO: need to refactor after be split into cn + dn
@@ -153,7 +153,7 @@ public class PulsarUtil {
                 // get info
                 request.timeout = 10;
                 Future<InternalService.PPulsarProxyResult> future =
-                    BackendServiceClient.getInstance().getPulsarInfo(address, request);
+                        BackendServiceClient.getInstance().getPulsarInfo(address, request);
                 InternalService.PPulsarProxyResult result = future.get(10, TimeUnit.SECONDS);
                 TStatusCode code = TStatusCode.findByValue(result.status.statusCode);
                 if (code != TStatusCode.OK) {
