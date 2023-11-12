@@ -87,9 +87,10 @@ public class PulsarUtil {
                 throws UserException {
             // create request
             InternalService.PPulsarMetaProxyRequest metaRequest = InternalService.PPulsarMetaProxyRequest.newBuilder()
-                    .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, convertedCustomProperties));
+                    .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, convertedCustomProperties))
+                    .build();
             InternalService.PPulsarProxyRequest request = InternalService.PPulsarProxyRequest.newBuilder()
-                    .setPulsarMetaRequest(metaRequest);
+                    .setPulsarMetaRequest(metaRequest).build();
 
             InternalService.PPulsarProxyResult result = sendProxyRequest(request);
             return result.getPulsarMetaResult().getPartitions();
@@ -101,9 +102,9 @@ public class PulsarUtil {
             // create request
             InternalService.PPulsarBacklogProxyRequest backlogRequest = InternalService.PPulsarBacklogProxyRequest
                     .newBuilder().setPartitions(partitions)
-                    .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, properties));
+                    .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, properties)).build();
             InternalService.PPulsarProxyRequest request = InternalService.PPulsarProxyRequest.newBuilder()
-                    .setPulsarBacklogRequest(backlogRequest);
+                    .setPulsarBacklogRequest(backlogRequest).build();
 
             // send request
             InternalService.PPulsarProxyResult result = sendProxyRequest(request);
@@ -122,9 +123,9 @@ public class PulsarUtil {
                 throws UserException {
             // create request
             InternalService.PPulsarBacklogBatchProxyRequest pPulsarBacklogBatchProxyRequest =
-                    InternalService.PPulsarBacklogBatchProxyRequest.newBuilder().setRequests(requests);
+                    InternalService.PPulsarBacklogBatchProxyRequest.newBuilder().setRequests(requests).build();
             InternalService.PPulsarProxyRequest pProxyRequest = InternalService.PPulsarProxyRequest.newBuilder()
-                    .setPulsarBacklogBatchRequest(pPulsarBacklogBatchProxyRequest);
+                    .setPulsarBacklogBatchRequest(pPulsarBacklogBatchProxyRequest).build();
 
             // send request
             InternalService.PPulsarProxyResult result = sendProxyRequest(pProxyRequest);
