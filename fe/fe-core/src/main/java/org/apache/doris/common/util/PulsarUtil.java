@@ -57,7 +57,7 @@ public class PulsarUtil {
     }
 
     public static List<InternalService.PPulsarBacklogProxyResult> getBatchBacklogNums(
-            List<PPulsarBacklogProxyRequest> requests)
+            List<InternalService.PPulsarBacklogProxyRequest> requests)
             throws UserException {
         return PROXY_API.getBatchBacklogNums(requests);
     }
