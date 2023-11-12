@@ -104,7 +104,7 @@ public class PulsarUtil {
                 throws UserException {
             // create request
             InternalService.PPulsarBacklogProxyRequest.Builder backlogRequest =
-                InternalService.PPulsarBacklogProxyRequest.newBuilder()
+                    InternalService.PPulsarBacklogProxyRequest.newBuilder()
                     .setPartitions(partitions)
                     .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, properties));
             InternalService.PPulsarProxyRequest request = InternalService.PPulsarProxyRequest.newBuilder()
