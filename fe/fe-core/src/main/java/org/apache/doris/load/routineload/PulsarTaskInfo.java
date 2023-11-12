@@ -26,12 +26,12 @@ import org.apache.doris.common.UserException;
 import org.apache.doris.common.util.DebugUtil;
 import org.apache.doris.thrift.TExecPlanFragmentParams;
 import org.apache.doris.thrift.TFileFormatType;
-import org.apache.doris.thrift.TPulsarLoadInfo;
-import org.apache.doris.thrift.TLoadSourceType;
-import org.apache.doris.thrift.TPipelineFragmentParams;
 import org.apache.doris.thrift.TPlanFragment;
+import org.apache.doris.thrift.TLoadSourceType;
+import org.apache.doris.thrift.TPulsarLoadInfo;
 import org.apache.doris.thrift.TRoutineLoadTask;
 import org.apache.doris.thrift.TUniqueId;
+
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
