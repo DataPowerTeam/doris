@@ -86,7 +86,7 @@ public class PulsarUtil {
                     .setPulsarMetaRequest(metaRequest).build();
 
             InternalService.PPulsarProxyResult result = sendProxyRequest(request);
-            return result.getPulsarMetaResult(0).getPartitions();
+            return result.getPulsarMetaResult().getPartitionsList();
         }
 
         public Map<String, Long> getBacklogNums(String serviceUrl, String topic, String subscription,
@@ -105,9 +105,9 @@ public class PulsarUtil {
 
             // assembly result
             Map<String, Long> partitionBacklogs = Maps.newHashMapWithExpectedSize(partitions.size());
-            List<Long> backlogs = result.getPulsarBacklogResult(0).getBacklogNums();
-            for (int i = 0; i < result.getPulsarBacklogResult(0).getPartitions().size(); i++) {
-                partitionBacklogs.put(result.getPulsarBacklogResult(0).getPartitions().get(i), backlogs.get(i));
+            List<Long> backlogs = result.getPulsarBacklogResult().getBacklogNumsList();
+            for (int i = 0; i < result.getPulsarBacklogResult().getPartitionsList().size(); i++) {
+                partitionBacklogs.put(result.getPulsarBacklogResult().getPartitionsList().get(i), backlogs.get(i));
             }
             return partitionBacklogs;
         }
