@@ -76,8 +76,8 @@ public class PulsarTaskInfo extends RoutineLoadTaskInfo {
         TRoutineLoadTask tRoutineLoadTask = new TRoutineLoadTask();
         TUniqueId queryId = new TUniqueId(id.getMostSignificantBits(), id.getLeastSignificantBits());
         tRoutineLoadTask.setId(queryId);
-        tRoutineLoadTask.setJob_id(jobId);
-        tRoutineLoadTask.setTxn_id(txnId);
+        tRoutineLoadTask.setJobId(jobId);
+        tRoutineLoadTask.setTxnId(txnId);
         Database database = Env.getCurrentInternalCatalog().getDbOrMetaException(routineLoadJob.getDbId());
         tRoutineLoadTask.setDb(database.getFullName());
         Table tbl = database.getTableNullable(routineLoadJob.getTableId());
@@ -89,31 +89,31 @@ public class PulsarTaskInfo extends RoutineLoadTaskInfo {
                 routineLoadJob.getId(), DebugUtil.printId(id), txnId);
         tRoutineLoadTask.setTbl(tbl.getName());
         tRoutineLoadTask.setLabel(label);
-        tRoutineLoadTask.setAuth_code(routineLoadJob.getAuthCode());
+        tRoutineLoadTask.setAuthCode(routineLoadJob.getAuthCode());
         TPulsarLoadInfo tPulsarLoadInfo = new TPulsarLoadInfo();
-        tPulsarLoadInfo.setService_url((routineLoadJob).getServiceUrl());
+        tPulsarLoadInfo.setServiceUrl((routineLoadJob).getServiceUrl());
         tPulsarLoadInfo.setTopic((routineLoadJob).getTopic());
         tPulsarLoadInfo.setSubscription((routineLoadJob).getSubscription());
         tPulsarLoadInfo.setPartitions(getPartitions());
         if (!initialPositions.isEmpty()) {
-            tPulsarLoadInfo.setInitial_positions(getInitialPositions());
+            tPulsarLoadInfo.setInitialPositions(getInitialPositions());
         }
         tPulsarLoadInfo.setProperties(routineLoadJob.getConvertedCustomProperties());
-        tRoutineLoadTask.setPulsar_load_info(tPulsarLoadInfo);
+        tRoutineLoadTask.setPulsarLoadInfo(tPulsarLoadInfo);
         tRoutineLoadTask.setType(TLoadSourceType.PULSAR);
         tRoutineLoadTask.setIsMultiTable(isMultiTable);
         tRoutineLoadTask.setParams(plan(routineLoadJob));
         tRoutineLoadTask.setMaxIntervalS(routineLoadJob.getMaxBatchIntervalS());
         tRoutineLoadTask.setMaxBatchRows(routineLoadJob.getMaxBatchRows());
-        tRoutineLoadTask.setMaxBatchSize(routineLoadJob.getMaxBatchSizeBytes);
+        tRoutineLoadTask.setMaxBatchSize(routineLoadJob.getMaxBatchSizeBytes());
         if (!routineLoadJob.getFormat().isEmpty() && routineLoadJob.getFormat().equalsIgnoreCase("json")) {
             tRoutineLoadTask.setFormat(TFileFormatType.FORMAT_JSON);
         } else {
             tRoutineLoadTask.setFormat(TFileFormatType.FORMAT_CSV_PLAIN);
         }
-        if (Math.abs(routineLoadJob.getMaxFilterRatio() - 1) > 0.001) {
-            tRoutineLoadTask.setMaxFilterRatio(routineLoadJob.getMaxFilterRatio());
-        }
+//        if (Math.abs(routineLoadJob.getMaxFilterRatio() - 1) > 0.001) {
+//            tRoutineLoadTask.setMaxFilterRatio(routineLoadJob.getMaxFilterRatio());
+//        }
         return tRoutineLoadTask;
     }
 
@@ -144,9 +144,9 @@ public class PulsarTaskInfo extends RoutineLoadTaskInfo {
     private TExecPlanFragmentParams plan(RoutineLoadJob routineLoadJob) throws UserException {
         TUniqueId loadId = new TUniqueId(id.getMostSignificantBits(), id.getLeastSignificantBits());
         // plan for each task, in case table has change(rollup or schema change)
-        TExecPlanFragmentParams tExecPlanFragmentParams = routineLoadJob.plan(loadId, txnId, label);
+        TExecPlanFragmentParams tExecPlanFragmentParams = routineLoadJob.plan(loadId, txnId);
         TPlanFragment tPlanFragment = tExecPlanFragmentParams.getFragment();
-        tPlanFragment.getOutput_sink().getOlap_table_sink().setTxn_id(txnId);
+        tPlanFragment.getOutputSink().getOlap_table_sink().setTxn_id(txnId);
         return tExecPlanFragmentParams;
     }
 }

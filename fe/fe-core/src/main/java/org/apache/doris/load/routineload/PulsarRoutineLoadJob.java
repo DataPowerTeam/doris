@@ -668,7 +668,7 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
 
     @Override
     protected String getLag() {
-        Map<Integer, Long> partitionIdToOffsetLag = ((KafkaProgress) progress).getLag(cachedPartitionWithLatestOffsets);
+        List<Long> partitionIdToOffsetLag = ((PulsarProgress) progress).getBacklogNums();
         Gson gson = new Gson();
         return gson.toJson(partitionIdToOffsetLag);
     }

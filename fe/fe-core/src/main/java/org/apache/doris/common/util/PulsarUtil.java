@@ -23,6 +23,7 @@ import org.apache.doris.common.LoadException;
 import org.apache.doris.common.UserException;
 import org.apache.doris.proto.InternalService;
 import org.apache.doris.rpc.BackendServiceClient;
+import org.apache.doris.rpc.BackendServiceProxy;
 import org.apache.doris.system.Backend;
 import org.apache.doris.thrift.TNetworkAddress;
 import org.apache.doris.thrift.TStatusCode;
@@ -66,17 +67,17 @@ public class PulsarUtil {
                                                                      String topic, String subscription,
                                                    ImmutableMap<String, String> properties) {
         InternalService.PPulsarLoadInfo pulsarLoadInfo = new InternalService.PPulsarLoadInfo();
-        pulsarLoadInfo.serviceUrl = serviceUrl;
-        pulsarLoadInfo.topic = topic;
-        pulsarLoadInfo.subscription = subscription;
+        pulsarLoadInfo.setServiceUrl(serviceUrl);
+        pulsarLoadInfo.setTopic(topic);
+        pulsarLoadInfo.setSubscription(subscription);
         for (Map.Entry<String, String> entry : properties.entrySet()) {
             InternalService.PStringPair pair = new InternalService.PStringPair();
-            pair.key = entry.getKey();
-            pair.val = entry.getValue();
-            if (pulsarLoadInfo.properties == null) {
-                pulsarLoadInfo.properties = Lists.newArrayList();
+            pair.setKey(entry.getKey());
+            pair.setVal(entry.getValue());
+            if (pulsarLoadInfo.getProperties() == null) {
+                pulsarLoadInfo.getProperties() = Lists.newArrayList();
             }
-            pulsarLoadInfo.properties.add(pair);
+            pulsarLoadInfo.getProperties().add(pair);
         }
         return pulsarLoadInfo;
     }
@@ -86,34 +87,33 @@ public class PulsarUtil {
                                                    ImmutableMap<String, String> convertedCustomProperties)
                 throws UserException {
             // create request
-            InternalService.PPulsarMetaProxyRequest metaRequest = new InternalService.PPulsarMetaProxyRequest();
-            metaRequest.pulsarInfo = genPPulsarLoadInfo(serviceUrl, topic, subscription, convertedCustomProperties);
-            InternalService.PPulsarProxyRequest request = new InternalService.PPulsarProxyRequest();
-            request.pulsarMetaRequest = metaRequest;
+            InternalService.PPulsarMetaProxyRequest metaRequest = InternalService.PPulsarMetaProxyRequest().newBuilder()
+                    .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, convertedCustomProperties));
+            InternalService.PPulsarProxyRequest request = InternalService.PPulsarProxyRequest().newBuilder()
+                    .setPulsarMetaRequest(metaRequest);
 
             InternalService.PPulsarProxyResult result = sendProxyRequest(request);
-            return result.pulsarMetaResult.partitions;
+            return result.getPulsarMetaResult().getPartitions();
         }
 
         public Map<String, Long> getBacklogNums(String serviceUrl, String topic, String subscription,
                                                 ImmutableMap<String, String> properties, List<String> partitions)
                 throws UserException {
             // create request
-            InternalService.PPulsarBacklogProxyRequest backlogRequest =
-                    new InternalService.PPulsarBacklogProxyRequest();
-            backlogRequest.pulsarInfo = genPPulsarLoadInfo(serviceUrl, topic, subscription, properties);
-            backlogRequest.partitions = partitions;
-            InternalService.PPulsarProxyRequest request = new InternalService.PPulsarProxyRequest();
-            request.pulsarBacklogRequest = backlogRequest;
+            InternalService.PPulsarBacklogProxyRequest backlogRequest = InternalService.PPulsarBacklogProxyRequest()
+                .newBuilder().setPartitions(partitions)
+                .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, properties));
+            InternalService.PPulsarProxyRequest request = InternalService.PPulsarProxyRequest().newBuilder()
+                    .setPulsarBacklogRequest(backlogRequest);
 
             // send request
             InternalService.PPulsarProxyResult result = sendProxyRequest(request);
 
             // assembly result
             Map<String, Long> partitionBacklogs = Maps.newHashMapWithExpectedSize(partitions.size());
-            List<Long> backlogs = result.pulsarBacklogResult.backlogNums;
-            for (int i = 0; i < result.pulsarBacklogResult.partitions.size(); i++) {
-                partitionBacklogs.put(result.pulsarBacklogResult.partitions.get(i), backlogs.get(i));
+            List<Long> backlogs = result.getPulsarBacklogResult().getBacklogNums;
+            for (int i = 0; i < result.getPulsarBacklogResult().getPartitions().size(); i++) {
+                partitionBacklogs.put(result.getPulsarBacklogResult().getPartitions().get(i), backlogs.get(i));
             }
             return partitionBacklogs;
         }
@@ -122,16 +122,15 @@ public class PulsarUtil {
                 List<InternalService.PPulsarBacklogProxyRequest> requests)
                 throws UserException {
             // create request
-            InternalService.PPulsarProxyRequest pProxyRequest = new InternalService.PPulsarProxyRequest();
             InternalService.PPulsarBacklogBatchProxyRequest pPulsarBacklogBatchProxyRequest =
-                    new PPulsarBacklogBatchProxyRequest();
-            pPulsarBacklogBatchProxyRequest.requests = requests;
-            pProxyRequest.pulsarBacklogBatchRequest = pPulsarBacklogBatchProxyRequest;
+                    InternalService.PPulsarBacklogBatchProxyRequest().newBuilder().setRequests(requests);
+            InternalService.PPulsarProxyRequest pProxyRequest = InternalService.PPulsarProxyRequest().newBuilder()
+                    .setPulsarBacklogBatchRequest(pPulsarBacklogBatchProxyRequest);
 
             // send request
             InternalService.PPulsarProxyResult result = sendProxyRequest(pProxyRequest);
 
-            return result.pulsarBacklogBatchResult.results;
+            return result.getPulsarBacklogBatchResult().getResults();
         }
 
         private InternalService.PPulsarProxyResult sendProxyRequest(
@@ -151,15 +150,15 @@ public class PulsarUtil {
                 address = new TNetworkAddress(be.getHost(), be.getBrpcPort());
 
                 // get info
-                request.timeout = 10;
+                request.setTimeout(10);
                 Future<InternalService.PPulsarProxyResult> future =
-                        BackendServiceClient.getInstance().getPulsarInfo(address, request);
+                    BackendServiceProxy.getInstance().getPulsarInfo(address, request);
                 InternalService.PPulsarProxyResult result = future.get(10, TimeUnit.SECONDS);
-                TStatusCode code = TStatusCode.findByValue(result.status.statusCode);
+                TStatusCode code = TStatusCode.findByValue(result.getStatus().getStatusCode());
                 if (code != TStatusCode.OK) {
-                    LOG.warn("failed to send proxy request to " + address + " err " + result.status.errorMsgs);
+                    LOG.warn("failed to send proxy request to " + address + " err " + result.getStatus().getErrorMsgsList());
                     throw new UserException(
-                            "failed to send proxy request to " + address + " err " + result.status.errorMsgs);
+                            "failed to send proxy request to " + address + " err " + result.getStatus().getErrorMsgsList());
                 } else {
                     return result;
                 }
