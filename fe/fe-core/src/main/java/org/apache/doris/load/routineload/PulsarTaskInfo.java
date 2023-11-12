@@ -111,9 +111,9 @@ public class PulsarTaskInfo extends RoutineLoadTaskInfo {
         } else {
             tRoutineLoadTask.setFormat(TFileFormatType.FORMAT_CSV_PLAIN);
         }
-//        if (Math.abs(routineLoadJob.getMaxFilterRatio() - 1) > 0.001) {
-//            tRoutineLoadTask.setMaxFilterRatio(routineLoadJob.getMaxFilterRatio());
-//        }
+        //if (Math.abs(routineLoadJob.getMaxFilterRatio() - 1) > 0.001) {
+        //    tRoutineLoadTask.setMaxFilterRatio(routineLoadJob.getMaxFilterRatio());
+        //}
         return tRoutineLoadTask;
     }
 

@@ -156,7 +156,7 @@ public class PulsarUtil {
                 TStatusCode code = TStatusCode.findByValue(result.getStatus().getStatusCode());
                 if (code != TStatusCode.OK) {
                     LOG.warn("failed to send proxy request to "
-                        + address + " err " + result.getStatus().getErrorMsgsList());
+                            + address + " err " + result.getStatus().getErrorMsgsList());
                     throw new UserException(
                             "failed to send proxy request to " + address
                                 + " err " + result.getStatus().getErrorMsgsList());
