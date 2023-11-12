@@ -25,7 +25,11 @@ import org.apache.doris.catalog.Env;
 import org.apache.doris.catalog.OlapTable;
 import org.apache.doris.common.*;
 import org.apache.doris.common.io.Text;
-import org.apache.doris.common.util.*;
+import org.apache.doris.common.util.DebugUtil;
+import org.apache.doris.common.util.PulsarUtil;
+import org.apache.doris.common.util.LogBuilder;
+import org.apache.doris.common.util.LogKey;
+import org.apache.doris.common.util.SmallFileMgr;
 import org.apache.doris.common.util.SmallFileMgr.SmallFile;
 import org.apache.doris.load.routineload.pulsar.PulsarConfiguration;
 import org.apache.doris.load.routineload.pulsar.PulsarDataSourceProperties;
@@ -52,7 +56,12 @@ import org.apache.logging.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * PulsarRoutineLoadJob is a kind of RoutineLoadJob which fetch data from pulsar.
@@ -74,7 +83,8 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
     private List<String> customPulsarPartitions = Lists.newArrayList();
     // current pulsar partitions is the actually partition which will be fetched
     private List<String> currentPulsarPartitions = Lists.newArrayList();
-    // pulsar properties, property prefix will be mapped to pulsar custom parameters, which can be extended in the future
+    // pulsar properties, property prefix will be mapped to pulsar custom parameters,
+    // which can be extended in the future
     @SerializedName("cpt")
     private Map<String, String> customProperties = Maps.newHashMap();
     private Map<String, String> convertedCustomProperties = Maps.newHashMap();
@@ -164,7 +174,7 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
         if (convertedCustomProperties.containsKey(PulsarConfiguration.PULSAR_DEFAULT_INITIAL_POSITION.getName())) {
             try {
                 this.defaultInitialPosition = PulsarDataSourceProperties.getPulsarPosition(
-                        convertedCustomProperties.remove(PulsarConfiguration.PULSAR_DEFAULT_INITIAL_POSITION.getName()));
+                    convertedCustomProperties.remove(PulsarConfiguration.PULSAR_DEFAULT_INITIAL_POSITION.getName()));
             } catch (AnalysisException e) {
                 throw new DdlException(e.getMessage());
             }
@@ -214,7 +224,7 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
     }
 
     @Override
-    public int calculateCurrentConcurrentTaskNum() throws MetaNotFoundException {
+    public int calculateCurrentConcurrentTaskNum() {
         int partitionNum = currentPulsarPartitions.size();
         if (desireTaskConcurrentNum == 0) {
             desireTaskConcurrentNum = Config.max_routine_load_task_concurrent_num;
@@ -238,12 +248,14 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
             return true;
         }
 
-        // For compatible reason, the default behavior of empty load is still returning "all partitions have no load data" and abort transaction.
+        // For compatible reason, the default behavior of empty load is still returning "all partitions
+        // have no load data" and abort transaction.
         // In this situation, we also need update commit info.
         if (txnStatusChangeReason != null &&
                 txnStatusChangeReason == TransactionState.TxnStatusChangeReason.NO_PARTITIONS) {
             // Because the max_filter_ratio of routine load task is always 1.
-            // Therefore, under normal circumstances, routine load task will not return the error "too many filtered rows".
+            // Therefore, under normal circumstances,
+            // routine load task will not return the error "too many filtered rows".
             // If no data is imported, the error "all partitions have no load data" may only be returned.
             // In this case, the status of the transaction is ABORTED,
             // but we still need to update the position to skip these error lines.
@@ -278,7 +290,8 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
         PulsarTaskInfo oldPulsarTaskInfo = (PulsarTaskInfo) routineLoadTaskInfo;
         // add new task
         PulsarTaskInfo pulsarTaskInfo = new PulsarTaskInfo(oldPulsarTaskInfo,
-                ((PulsarProgress) progress).getPartitionToInitialPosition(oldPulsarTaskInfo.getPartitions()), isMultiTable());
+                ((PulsarProgress) progress).getPartitionToInitialPosition(oldPulsarTaskInfo.getPartitions()),
+            isMultiTable());
         // remove old task
         routineLoadTaskInfoList.remove(routineLoadTaskInfo);
         // add new task
@@ -296,7 +309,8 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
     // else if pulsar partitions of topic has been changed, return true.
     // else return false
     // update current pulsar partition at the same time
-    // current pulsar partitions = customPulsarPartitions == 0 ? all of partition of pulsar topic : customPulsarPartitions
+    // current pulsar partitions = customPulsarPartitions == 0 ?
+    // all of partition of pulsar topic : customPulsarPartitions
     @Override
     protected boolean unprotectNeedReschedule() throws UserException {
         // only running and need_schedule job need to be changed current pulsar partitions
@@ -382,15 +396,15 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
         PulsarDataSourceProperties pulsarProperties = (PulsarDataSourceProperties) stmt.getDataSourceProperties();
         PulsarRoutineLoadJob pulsarRoutineLoadJob;
         if (pulsarProperties.isMultiTable()) {
-            pulsarRoutineLoadJob = new PulsarRoutineLoadJob(id, stmt.getName(),
-                db.getClusterName(), db.getId(), pulsarProperties.getPulsarServiceUrl(), pulsarProperties.getPulsarTopic(),
+            pulsarRoutineLoadJob = new PulsarRoutineLoadJob(id, stmt.getName(), db.getClusterName(), db.getId(),
+                pulsarProperties.getPulsarServiceUrl(), pulsarProperties.getPulsarTopic(),
                 pulsarProperties.getPulsarSubscription(), stmt.getUserInfo(), true);
         } else {
             OlapTable olapTable = db.getOlapTableOrDdlException(stmt.getTableName());
             checkMeta(olapTable, stmt.getRoutineLoadDesc());
             long tableId = olapTable.getId();
-            pulsarRoutineLoadJob = new PulsarRoutineLoadJob(id, stmt.getName(),
-                db.getClusterName(), db.getId(), tableId, pulsarProperties.getPulsarServiceUrl(), pulsarProperties.getPulsarTopic(),
+            pulsarRoutineLoadJob = new PulsarRoutineLoadJob(id, stmt.getName(), db.getClusterName(), db.getId(),
+                tableId, pulsarProperties.getPulsarServiceUrl(), pulsarProperties.getPulsarTopic(),
                 pulsarProperties.getPulsarSubscription(), stmt.getUserInfo());
         }
         pulsarRoutineLoadJob.setOptional(stmt);
@@ -558,7 +572,8 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
     @Override
     public void replayModifyProperties(AlterRoutineLoadJobOperationLog log) {
         try {
-            modifyPropertiesInternal(log.getJobProperties(), (PulsarDataSourceProperties) log.getDataSourceProperties());
+            modifyPropertiesInternal(log.getJobProperties(),
+                (PulsarDataSourceProperties) log.getDataSourceProperties());
         } catch (DdlException e) {
             // should not happen
             LOG.error("failed to replay modify kafka routine load job: {}", id, e);
@@ -617,14 +632,15 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
     public boolean hasMoreDataToConsume(UUID taskId, List<String> partitions, Map<String, Long> initialPositions) {
         // Got initialPositions, we need to execute even there's no backlogs
         if (!initialPositions.isEmpty()) {
-            LOG.debug("Got initialPositions, we need to execute even there's no backlogs. partitions to be consumed: {}, initialPositions: {}, task {}, job {}",
-                partitions, initialPositions, taskId, id);
+            LOG.debug("Got initialPositions, we need to execute even there's no backlogs. " +
+                    "partitions to be consumed: {}, initialPositions: {}, task {}, job {}",
+                    partitions, initialPositions, taskId, id);
             return true;
         }
 
         try {
             Map<String, Long> backlogNums = PulsarUtil.getBacklogNums(getServiceUrl(), getTopic(), getSubscription(),
-                ImmutableMap.copyOf(getConvertedCustomProperties()), partitions);
+                    ImmutableMap.copyOf(getConvertedCustomProperties()), partitions);
             for (String partition : partitions) {
                 Long backlogNum = backlogNums.get(partition);
                 if (backlogNum != null && backlogNum > 0) {
@@ -636,8 +652,9 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
             return false;
         }
 
-        LOG.debug("no more data to consume. partitions to be consumed: {}, initialPositions: {}, task {}, job {}",
-            partitions, initialPositions, taskId, id);
+        LOG.debug("no more data to consume. partitions to be consumed: {}, " +
+                "initialPositions: {}, task {}, job {}",
+                partitions, initialPositions, taskId, id);
         return false;
     }
 

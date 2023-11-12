@@ -23,7 +23,7 @@ import org.apache.doris.common.Config;
 import org.apache.doris.common.LoadException;
 import org.apache.doris.common.UserException;
 import org.apache.doris.rpc.BackendServiceClient;
-import org.apache.doris.proto.*;
+import org.apache.doris.proto.InternalService;
 import org.apache.doris.system.Backend;
 import org.apache.doris.thrift.TNetworkAddress;
 import org.apache.doris.thrift.TStatusCode;
@@ -57,19 +57,19 @@ public class PulsarUtil {
         return PROXY_API.getBacklogNums(serviceUrl, topic, subscription, properties, partitions);
     }
 
-    public static List<PPulsarBacklogProxyResult> getBatchBacklogNums(List<PPulsarBacklogProxyRequest> requests)
+    public static List<InternalService.PPulsarBacklogProxyResult> getBatchBacklogNums(List<PPulsarBacklogProxyRequest> requests)
             throws UserException {
         return PROXY_API.getBatchBacklogNums(requests);
     }
 
-    public static PPulsarLoadInfo genPPulsarLoadInfo(String serviceUrl, String topic, String subscription,
+    public static InternalService.PPulsarLoadInfo genPPulsarLoadInfo(String serviceUrl, String topic, String subscription,
                                                    ImmutableMap<String, String> properties) {
-        PPulsarLoadInfo pulsarLoadInfo = new PPulsarLoadInfo();
+        InternalService.PPulsarLoadInfo pulsarLoadInfo = new InternalService.PPulsarLoadInfo();
         pulsarLoadInfo.serviceUrl = serviceUrl;
         pulsarLoadInfo.topic = topic;
         pulsarLoadInfo.subscription = subscription;
         for (Map.Entry<String, String> entry : properties.entrySet()) {
-            PStringPair pair = new PStringPair();
+            InternalService.PStringPair pair = new InternalService.PStringPair();
             pair.key = entry.getKey();
             pair.val = entry.getValue();
             if (pulsarLoadInfo.properties == null) {
@@ -85,12 +85,12 @@ public class PulsarUtil {
                                                    ImmutableMap<String, String> convertedCustomProperties)
                 throws UserException {
             // create request
-            PPulsarMetaProxyRequest metaRequest = new PPulsarMetaProxyRequest();
+            InternalService.PPulsarMetaProxyRequest metaRequest = new InternalService.PPulsarMetaProxyRequest();
             metaRequest.pulsarInfo = genPPulsarLoadInfo(serviceUrl, topic, subscription, convertedCustomProperties);
-            PPulsarProxyRequest request = new PPulsarProxyRequest();
+            InternalService.PPulsarProxyRequest request = new InternalService.PPulsarProxyRequest();
             request.pulsarMetaRequest = metaRequest;
 
-            PPulsarProxyResult result = sendProxyRequest(request);
+            InternalService.PPulsarProxyResult result = sendProxyRequest(request);
             return result.pulsarMetaResult.partitions;
         }
 
@@ -98,14 +98,14 @@ public class PulsarUtil {
                                                 ImmutableMap<String, String> properties, List<String> partitions)
                 throws UserException {
             // create request
-            PPulsarBacklogProxyRequest backlogRequest = new PPulsarBacklogProxyRequest();
+            InternalService.PPulsarBacklogProxyRequest backlogRequest = new InternalService.PPulsarBacklogProxyRequest();
             backlogRequest.pulsarInfo = genPPulsarLoadInfo(serviceUrl, topic, subscription, properties);
             backlogRequest.partitions = partitions;
-            PPulsarProxyRequest request = new PPulsarProxyRequest();
+            InternalService.PPulsarProxyRequest request = new InternalService.PPulsarProxyRequest();
             request.pulsarBacklogRequest = backlogRequest;
 
             // send request
-            PPulsarProxyResult result = sendProxyRequest(request);
+            InternalService.PPulsarProxyResult result = sendProxyRequest(request);
 
             // assembly result
             Map<String, Long> partitionBacklogs = Maps.newHashMapWithExpectedSize(partitions.size());
@@ -116,21 +116,21 @@ public class PulsarUtil {
             return partitionBacklogs;
         }
 
-        public List<PPulsarBacklogProxyResult> getBatchBacklogNums(List<PPulsarBacklogProxyRequest> requests)
+        public List<InternalService.PPulsarBacklogProxyResult> getBatchBacklogNums(List<InternalService.PPulsarBacklogProxyRequest> requests)
                 throws UserException {
             // create request
-            PPulsarProxyRequest pProxyRequest = new PPulsarProxyRequest();
-            PPulsarBacklogBatchProxyRequest pPulsarBacklogBatchProxyRequest = new PPulsarBacklogBatchProxyRequest();
+            InternalService.PPulsarProxyRequest pProxyRequest = new InternalService.PPulsarProxyRequest();
+            InternalService.PPulsarBacklogBatchProxyRequest pPulsarBacklogBatchProxyRequest = new PPulsarBacklogBatchProxyRequest();
             pPulsarBacklogBatchProxyRequest.requests = requests;
             pProxyRequest.pulsarBacklogBatchRequest = pPulsarBacklogBatchProxyRequest;
 
             // send request
-            PPulsarProxyResult result = sendProxyRequest(pProxyRequest);
+            InternalService.PPulsarProxyResult result = sendProxyRequest(pProxyRequest);
 
             return result.pulsarBacklogBatchResult.results;
         }
 
-        private PPulsarProxyResult sendProxyRequest(PPulsarProxyRequest request) throws UserException {
+        private InternalService.PPulsarProxyResult sendProxyRequest(InternalService.PPulsarProxyRequest request) throws UserException {
             TNetworkAddress address = new TNetworkAddress();
             try {
                 // TODO: need to refactor after be split into cn + dn
@@ -142,13 +142,13 @@ public class PulsarUtil {
 
                 Collections.shuffle(nodeIds);
 
-                ComputeNode be = GlobalStateMgr.getCurrentSystemInfo().getBackendOrComputeNode(nodeIds.get(0));
+                Backend be = Env.getCurrentSystemInfo().getBackend(nodeIds.get(0));
                 address = new TNetworkAddress(be.getHost(), be.getBrpcPort());
 
                 // get info
-                request.timeout = Config.routine_load_pulsar_timeout_second;
-                Future<PPulsarProxyResult> future = BackendServiceClient.getInstance().getPulsarInfo(address, request);
-                PPulsarProxyResult result = future.get(Config.routine_load_pulsar_timeout_second, TimeUnit.SECONDS);
+                request.timeout = 10;
+                Future<InternalService.PPulsarProxyResult> future = BackendServiceClient.getInstance().getPulsarInfo(address, request);
+                InternalService.PPulsarProxyResult result = future.get(10, TimeUnit.SECONDS);
                 TStatusCode code = TStatusCode.findByValue(result.status.statusCode);
                 if (code != TStatusCode.OK) {
                     LOG.warn("failed to send proxy request to " + address + " err " + result.status.errorMsgs);

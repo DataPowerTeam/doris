@@ -214,8 +214,8 @@ public class RoutineLoadTaskScheduler extends MasterDaemon {
                         tRoutineLoadTask.getJobId());
             } else if (tRoutineLoadTask.isSetPulsarLoadInfo()) {
                 LOG.debug("send pulsar routine load task {} with partitions: {}, job: {}",
-                    tRoutineLoadTask.label, tRoutineLoadTask.pulsar_load_info.partitions,
-                    tRoutineLoadTask.getJobId());
+                        tRoutineLoadTask.label, tRoutineLoadTask.pulsar_load_info.partitions,
+                        tRoutineLoadTask.getJobId());
             }
         } catch (LoadException e) {
             // submit task failed (such as TOO_MANY_TASKS error), but txn has already begun.

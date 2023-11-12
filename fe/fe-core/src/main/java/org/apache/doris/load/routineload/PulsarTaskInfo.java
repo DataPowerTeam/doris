@@ -24,8 +24,14 @@ import org.apache.doris.catalog.Table;
 import org.apache.doris.common.MetaNotFoundException;
 import org.apache.doris.common.UserException;
 import org.apache.doris.common.util.DebugUtil;
-import org.apache.doris.thrift.*;
-
+import org.apache.doris.thrift.TExecPlanFragmentParams;
+import org.apache.doris.thrift.TFileFormatType;
+import org.apache.doris.thrift.TPulsarLoadInfo;
+import org.apache.doris.thrift.TLoadSourceType;
+import org.apache.doris.thrift.TPipelineFragmentParams;
+import org.apache.doris.thrift.TPlanFragment;
+import org.apache.doris.thrift.TRoutineLoadTask;
+import org.apache.doris.thrift.TUniqueId;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
@@ -40,8 +46,8 @@ public class PulsarTaskInfo extends RoutineLoadTaskInfo {
     private List<String> partitions;
     private Map<String, Long> initialPositions = Maps.newHashMap();
 
-    public PulsarTaskInfo(UUID id, long jobId, String clusterName,
-                          List<String> partitions, Map<String, Long> initialPositions, long tastTimeoutMs, boolean isMultiTable) {
+    public PulsarTaskInfo(UUID id, long jobId, String clusterName, List<String> partitions,
+                          Map<String, Long> initialPositions, long tastTimeoutMs, boolean isMultiTable) {
         super(id, jobId, clusterName, tastTimeoutMs, isMultiTable);
         this.partitions = partitions;
         this.initialPositions.putAll(initialPositions);
@@ -49,7 +55,7 @@ public class PulsarTaskInfo extends RoutineLoadTaskInfo {
 
     public PulsarTaskInfo(PulsarTaskInfo pulsarTaskInfo, Map<String, Long> initialPositions, boolean isMultiTable) {
         super(UUID.randomUUID(), pulsarTaskInfo.getJobId(), pulsarTaskInfo.getClusterName(),
-            pulsarTaskInfo.getTimeoutMs(), pulsarTaskInfo.getBeId(), isMultiTable);
+                pulsarTaskInfo.getTimeoutMs(), pulsarTaskInfo.getBeId(), isMultiTable);
         this.partitions = pulsarTaskInfo.getPartitions();
         this.initialPositions.putAll(initialPositions);
     }
@@ -72,9 +78,7 @@ public class PulsarTaskInfo extends RoutineLoadTaskInfo {
         tRoutineLoadTask.setId(queryId);
         tRoutineLoadTask.setJob_id(jobId);
         tRoutineLoadTask.setTxn_id(txnId);
-        Database database =
-            Env.getCurrentInternalCatalog().getDbOrMetaException(routineLoadJob.getDbId());
-
+        Database database = Env.getCurrentInternalCatalog().getDbOrMetaException(routineLoadJob.getDbId());
         tRoutineLoadTask.setDb(database.getFullName());
         Table tbl = database.getTableNullable(routineLoadJob.getTableId());
         if (tbl == null) {
@@ -82,7 +86,7 @@ public class PulsarTaskInfo extends RoutineLoadTaskInfo {
         }
         // label = job_name+job_id+task_id+txn_id
         String label = Joiner.on("-").join(routineLoadJob.getName(),
-            routineLoadJob.getId(), DebugUtil.printId(id), txnId);
+                routineLoadJob.getId(), DebugUtil.printId(id), txnId);
         tRoutineLoadTask.setTbl(tbl.getName());
         tRoutineLoadTask.setLabel(label);
         tRoutineLoadTask.setAuth_code(routineLoadJob.getAuthCode());
