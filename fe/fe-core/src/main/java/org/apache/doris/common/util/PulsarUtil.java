@@ -22,7 +22,6 @@ import org.apache.doris.catalog.Env;
 import org.apache.doris.common.LoadException;
 import org.apache.doris.common.UserException;
 import org.apache.doris.proto.InternalService;
-import org.apache.doris.rpc.BackendServiceClient;
 import org.apache.doris.rpc.BackendServiceProxy;
 import org.apache.doris.system.Backend;
 import org.apache.doris.thrift.TNetworkAddress;
@@ -101,8 +100,8 @@ public class PulsarUtil {
                 throws UserException {
             // create request
             InternalService.PPulsarBacklogProxyRequest backlogRequest = InternalService.PPulsarBacklogProxyRequest()
-                .newBuilder().setPartitions(partitions)
-                .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, properties));
+                    .newBuilder().setPartitions(partitions)
+                    .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, properties));
             InternalService.PPulsarProxyRequest request = InternalService.PPulsarProxyRequest().newBuilder()
                     .setPulsarBacklogRequest(backlogRequest);
 
@@ -152,13 +151,15 @@ public class PulsarUtil {
                 // get info
                 request.setTimeout(10);
                 Future<InternalService.PPulsarProxyResult> future =
-                    BackendServiceProxy.getInstance().getPulsarInfo(address, request);
+                        BackendServiceProxy.getInstance().getPulsarInfo(address, request);
                 InternalService.PPulsarProxyResult result = future.get(10, TimeUnit.SECONDS);
                 TStatusCode code = TStatusCode.findByValue(result.getStatus().getStatusCode());
                 if (code != TStatusCode.OK) {
-                    LOG.warn("failed to send proxy request to " + address + " err " + result.getStatus().getErrorMsgsList());
+                    LOG.warn("failed to send proxy request to "
+                        + address + " err " + result.getStatus().getErrorMsgsList());
                     throw new UserException(
-                            "failed to send proxy request to " + address + " err " + result.getStatus().getErrorMsgsList());
+                            "failed to send proxy request to " + address
+                                + " err " + result.getStatus().getErrorMsgsList());
                 } else {
                     return result;
                 }
