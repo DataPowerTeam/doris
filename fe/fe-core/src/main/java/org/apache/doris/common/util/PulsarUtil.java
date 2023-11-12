@@ -28,7 +28,6 @@ import org.apache.doris.thrift.TNetworkAddress;
 import org.apache.doris.thrift.TStatusCode;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -104,8 +103,9 @@ public class PulsarUtil {
                                                 ImmutableMap<String, String> properties, List<String> partitions)
                 throws UserException {
             // create request
-            InternalService.PPulsarBacklogProxyRequest.Builder backlogRequest = InternalService.PPulsarBacklogProxyRequest
-                    .newBuilder().setPartitions(partitions)
+            InternalService.PPulsarBacklogProxyRequest.Builder backlogRequest =
+                InternalService.PPulsarBacklogProxyRequest.newBuilder()
+                    .setPartitions(partitions)
                     .setPulsarInfo(genPPulsarLoadInfo(serviceUrl, topic, subscription, properties));
             InternalService.PPulsarProxyRequest request = InternalService.PPulsarProxyRequest.newBuilder()
                     .setPulsarBacklogRequest(backlogRequest).build();
@@ -115,7 +115,7 @@ public class PulsarUtil {
 
             // assembly result
             Map<String, Long> partitionBacklogs = Maps.newHashMapWithExpectedSize(partitions.size());
-            for(InternalService.PPulsarBacklogProxyResult backlogResult : result.getPulsarBacklogResult()) {
+            for (InternalService.PPulsarBacklogProxyResult backlogResult : result.getPulsarBacklogResult()) {
                 List<Long> backlogs = backlogResult.getBacklogNums();
                 for (int i = 0; i < backlogResult.getPartitions().size(); i++) {
                     partitionBacklogs.put(backlogResult.getPartitions().get(i), backlogs.get(i));
