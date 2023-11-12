@@ -330,7 +330,7 @@ public class BackendServiceProxy {
         }
     }
 
-    public Future<PPulsarProxyResult> getPulsarInfo(
+    public Future<InternalService.PPulsarProxyResult> getPulsarInfo(
             TNetworkAddress address, InternalService.PPulsarProxyRequest request) throws RpcException {
         try {
             final BackendServiceClient client = getProxy(address);
