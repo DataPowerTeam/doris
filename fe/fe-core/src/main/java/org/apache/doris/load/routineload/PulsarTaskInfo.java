@@ -146,7 +146,7 @@ public class PulsarTaskInfo extends RoutineLoadTaskInfo {
         // plan for each task, in case table has change(rollup or schema change)
         TExecPlanFragmentParams tExecPlanFragmentParams = routineLoadJob.plan(loadId, txnId);
         TPlanFragment tPlanFragment = tExecPlanFragmentParams.getFragment();
-        tPlanFragment.getOutputSink().getOlap_table_sink().setTxn_id(txnId);
+        tPlanFragment.getOutputSink().getOlapTableSink().setTxnId(txnId);
         return tExecPlanFragmentParams;
     }
 }
