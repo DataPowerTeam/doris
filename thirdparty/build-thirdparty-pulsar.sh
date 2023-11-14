@@ -312,29 +312,6 @@ strip_lib() {
     fi
 }
 
-# curl
-build_curl() {
-    check_if_source_exist "${CURL_SOURCE}"
-    cd "${TP_SOURCE_DIR}/${CURL_SOURCE}"
-
-    if [[ "${KERNEL}" != 'Darwin' ]]; then
-        libs='-lcrypto -lssl -lcrypto -ldl -static'
-    else
-        libs='-lcrypto -lssl -lcrypto -ldl'
-    fi
-
-    CPPFLAGS="-I${TP_INCLUDE_DIR} " \
-        LDFLAGS="-L${TP_LIB_DIR}" LIBS="${libs}" \
-        PKG_CONFIG="pkg-config --static" \
-        ./configure --prefix="${TP_INSTALL_DIR}" --disable-shared --enable-static \
-        --without-librtmp --with-ssl="${TP_INSTALL_DIR}" --without-libidn2 --disable-ldap --enable-ipv6 \
-        --without-libssh2 --without-brotli --without-nghttp2
-
-    make curl_LDFLAGS=-all-static -j "${PARALLEL}"
-    make curl_LDFLAGS=-all-static install
-    strip_lib libcurl.a
-}
-
 build_openssl() {
     MACHINE_TYPE="$(uname -m)"
     OPENSSL_PLATFORM="linux-x86_64"
@@ -365,6 +342,42 @@ build_openssl() {
         rm -rf "${TP_INSTALL_DIR}"/lib64/libssl.so*
     fi
     remove_all_dylib
+}
+
+# zlib
+build_zlib() {
+    check_if_source_exist "${ZLIB_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${ZLIB_SOURCE}"
+
+    CFLAGS="-O3 -fPIC" \
+        CPPFLAGS="-I${TP_INCLUDE_DIR}" \
+        LDFLAGS="-L${TP_LIB_DIR}" \
+        ./configure --prefix="${TP_INSTALL_DIR}"
+
+    make -j "${PARALLEL}"
+    make install
+
+    # minizip
+    cd contrib/minizip
+    autoreconf --force --install
+    ./configure --prefix="${TP_INSTALL_DIR}" --enable-static=yes --enable-shared=no
+    make -j "${PARALLEL}"
+    make install
+}
+
+# zstd
+build_zstd() {
+    check_if_source_exist "${ZSTD_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${ZSTD_SOURCE}/build/cmake"
+
+    mkdir -p "${BUILD_DIR}"
+    cd "${BUILD_DIR}"
+
+    "${CMAKE_CMD}" -G "${GENERATOR}" -DBUILD_TESTING=OFF -DZSTD_BUILD_TESTS=OFF -DZSTD_BUILD_STATIC=ON \
+        -DZSTD_BUILD_PROGRAMS=OFF -DZSTD_BUILD_SHARED=OFF -DCMAKE_INSTALL_PREFIX="${TP_INSTALL_DIR}" ..
+
+    "${BUILD_SYSTEM}" -j "${PARALLEL}" install
+    strip_lib libzstd.a
 }
 
 # boost
@@ -436,6 +449,54 @@ build_protobuf() {
     strip_lib libprotoc.a
 }
 
+# snappy
+build_snappy() {
+    check_if_source_exist "${SNAPPY_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${SNAPPY_SOURCE}"
+
+    mkdir -p "${BUILD_DIR}"
+    cd "${BUILD_DIR}"
+
+    rm -rf CMakeCache.txt CMakeFiles/
+
+    CFLAGS="-O3" CXXFLAGS="-O3" "${CMAKE_CMD}" -G "${GENERATOR}" -DCMAKE_INSTALL_PREFIX="${TP_INSTALL_DIR}" \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DCMAKE_INSTALL_INCLUDEDIR="${TP_INCLUDE_DIR}"/snappy \
+        -DSNAPPY_BUILD_TESTS=0 ../
+
+    "${BUILD_SYSTEM}" -j "${PARALLEL}"
+    "${BUILD_SYSTEM}" install
+
+    #build for libarrow.a
+    cp "${TP_INCLUDE_DIR}/snappy/snappy-c.h" "${TP_INCLUDE_DIR}/snappy-c.h"
+    cp "${TP_INCLUDE_DIR}/snappy/snappy-sinksource.h" "${TP_INCLUDE_DIR}/snappy-sinksource.h"
+    cp "${TP_INCLUDE_DIR}/snappy/snappy-stubs-public.h" "${TP_INCLUDE_DIR}/snappy-stubs-public.h"
+    cp "${TP_INCLUDE_DIR}/snappy/snappy.h" "${TP_INCLUDE_DIR}/snappy.h"
+}
+
+# curl
+build_curl() {
+    check_if_source_exist "${CURL_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${CURL_SOURCE}"
+
+    if [[ "${KERNEL}" != 'Darwin' ]]; then
+        libs='-lcrypto -lssl -lcrypto -ldl -static'
+    else
+        libs='-lcrypto -lssl -lcrypto -ldl'
+    fi
+
+    CPPFLAGS="-I${TP_INCLUDE_DIR} " \
+        LDFLAGS="-L${TP_LIB_DIR}" LIBS="${libs}" \
+        PKG_CONFIG="pkg-config --static" \
+        ./configure --prefix="${TP_INSTALL_DIR}" --disable-shared --enable-static \
+        --without-librtmp --with-ssl="${TP_INSTALL_DIR}" --without-libidn2 --disable-ldap --enable-ipv6 \
+        --without-libssh2 --without-brotli --without-nghttp2
+
+    make curl_LDFLAGS=-all-static -j "${PARALLEL}"
+    make curl_LDFLAGS=-all-static install
+    strip_lib libcurl.a
+}
+
 # pulsar
 build_pulsar() {
     check_if_source_exist "${PULSAR_SOURCE}"
@@ -453,9 +514,12 @@ build_pulsar() {
 if [[ "${#packages[@]}" -eq 0 ]]; then
     packages=(
         openssl
+        zlib
+        zstd
         boost # must before thrift
         gtest
         protobuf # after gtest
+        snappy
         curl
         pulsar
     )
