@@ -312,6 +312,61 @@ strip_lib() {
     fi
 }
 
+# curl
+build_curl() {
+    check_if_source_exist "${CURL_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${CURL_SOURCE}"
+
+    if [[ "${KERNEL}" != 'Darwin' ]]; then
+        libs='-lcrypto -lssl -lcrypto -ldl -static'
+    else
+        libs='-lcrypto -lssl -lcrypto -ldl'
+    fi
+
+    CPPFLAGS="-I${TP_INCLUDE_DIR} " \
+        LDFLAGS="-L${TP_LIB_DIR}" LIBS="${libs}" \
+        PKG_CONFIG="pkg-config --static" \
+        ./configure --prefix="${TP_INSTALL_DIR}" --disable-shared --enable-static \
+        --without-librtmp --with-ssl="${TP_INSTALL_DIR}" --without-libidn2 --disable-ldap --enable-ipv6 \
+        --without-libssh2 --without-brotli --without-nghttp2
+
+    make curl_LDFLAGS=-all-static -j "${PARALLEL}"
+    make curl_LDFLAGS=-all-static install
+    strip_lib libcurl.a
+}
+
+build_openssl() {
+    MACHINE_TYPE="$(uname -m)"
+    OPENSSL_PLATFORM="linux-x86_64"
+    if [[ "${KERNEL}" == 'Darwin' ]]; then
+        OPENSSL_PLATFORM="darwin64-${MACHINE_TYPE}-cc"
+    elif [[ "${MACHINE_TYPE}" == "aarch64" ]]; then
+        OPENSSL_PLATFORM="linux-aarch64"
+    fi
+
+    check_if_source_exist "${OPENSSL_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${OPENSSL_SOURCE}"
+
+    CPPFLAGS="-I${TP_INCLUDE_DIR}" \
+        CXXFLAGS="-I${TP_INCLUDE_DIR}" \
+        LDFLAGS="-L${TP_LIB_DIR}" \
+        LIBDIR="lib" \
+        ./Configure --prefix="${TP_INSTALL_DIR}" --with-rand-seed=devrandom -shared "${OPENSSL_PLATFORM}"
+    # NOTE(amos): Never use '&&' to concat commands as it will eat error code
+    # See https://mywiki.wooledge.org/BashFAQ/105 for more detail.
+    make -j "${PARALLEL}"
+    make install_sw
+    # NOTE(zc): remove this dynamic library files to make libcurl static link.
+    # If I don't remove this files, I don't known how to make libcurl link static library
+    if [[ -f "${TP_INSTALL_DIR}/lib64/libcrypto.so" ]]; then
+        rm -rf "${TP_INSTALL_DIR}"/lib64/libcrypto.so*
+    fi
+    if [[ -f "${TP_INSTALL_DIR}/lib64/libssl.so" ]]; then
+        rm -rf "${TP_INSTALL_DIR}"/lib64/libssl.so*
+    fi
+    remove_all_dylib
+}
+
 # boost
 build_boost() {
     check_if_source_exist "${BOOST_SOURCE}"
@@ -331,6 +386,56 @@ build_boost() {
         cxxflags="-std=c++17 -g -I${TP_INCLUDE_DIR} -L${TP_LIB_DIR}" install
 }
 
+# gtest
+build_gtest() {
+    check_if_source_exist "${GTEST_SOURCE}"
+
+    cd "${TP_SOURCE_DIR}/${GTEST_SOURCE}"
+
+    mkdir -p "${BUILD_DIR}"
+    cd "${BUILD_DIR}"
+
+    rm -rf CMakeCache.txt CMakeFiles/
+    "${CMAKE_CMD}" ../ -G "${GENERATOR}" -DCMAKE_INSTALL_PREFIX="${TP_INSTALL_DIR}" -DCMAKE_POSITION_INDEPENDENT_CODE=On
+    # -DCMAKE_CXX_FLAGS="$warning_uninitialized"
+
+    "${BUILD_SYSTEM}" -j "${PARALLEL}"
+    "${BUILD_SYSTEM}" install
+    strip_lib libgtest.a
+}
+
+# protobuf
+build_protobuf() {
+    check_if_source_exist "${PROTOBUF_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${PROTOBUF_SOURCE}"
+
+    if [[ "${KERNEL}" == 'Darwin' ]]; then
+        ldflags="-L${TP_LIB_DIR}"
+    else
+        ldflags="-L${TP_LIB_DIR} -static-libstdc++ -static-libgcc -Wl,--undefined=pthread_create"
+    fi
+
+    mkdir -p cmake/build
+    cd cmake/build
+
+    CXXFLAGS="-O2 -I${TP_INCLUDE_DIR}" \
+        LDFLAGS="${ldflags}" \
+        "${CMAKE_CMD}" -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_PREFIX_PATH="${TP_INSTALL_DIR}" \
+        -Dprotobuf_USE_EXTERNAL_GTEST=ON \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -Dprotobuf_BUILD_SHARED_LIBS=OFF \
+        -Dprotobuf_BUILD_TESTS=OFF \
+        -Dprotobuf_WITH_ZLIB_DEFAULT=ON \
+        -Dprotobuf_ABSL_PROVIDER=package \
+        -DCMAKE_INSTALL_PREFIX="${TP_INSTALL_DIR}" ../..
+
+    make -j "${PARALLEL}"
+    make install
+    strip_lib libprotobuf.a
+    strip_lib libprotoc.a
+}
+
 # pulsar
 build_pulsar() {
     check_if_source_exist "${PULSAR_SOURCE}"
@@ -347,7 +452,11 @@ build_pulsar() {
 
 if [[ "${#packages[@]}" -eq 0 ]]; then
     packages=(
-        boost
+        openssl
+        boost # must before thrift
+        gtest
+        protobuf # after gtest
+        curl
         pulsar
     )
     if [[ "$(uname -s)" == 'Darwin' ]]; then
