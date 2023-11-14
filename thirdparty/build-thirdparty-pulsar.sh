@@ -312,6 +312,25 @@ strip_lib() {
     fi
 }
 
+# boost
+build_boost() {
+    check_if_source_exist "${BOOST_SOURCE}"
+    cd "${TP_SOURCE_DIR}/${BOOST_SOURCE}"
+
+    if [[ "${KERNEL}" != 'Darwin' ]]; then
+        cxxflags='-static'
+    else
+        cxxflags=''
+    fi
+
+    CXXFLAGS="${cxxflags}" \
+        ./bootstrap.sh --prefix="${TP_INSTALL_DIR}" --with-toolset="${boost_toolset}"
+    # -q: Fail at first error
+    ./b2 -q link=static runtime-link=static -j "${PARALLEL}" \
+        --without-mpi --without-graph --without-graph_parallel --without-python \
+        cxxflags="-std=c++17 -g -I${TP_INCLUDE_DIR} -L${TP_LIB_DIR}" install
+}
+
 # pulsar
 build_pulsar() {
     check_if_source_exist "${PULSAR_SOURCE}"
