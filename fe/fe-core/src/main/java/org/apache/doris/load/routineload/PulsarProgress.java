@@ -113,6 +113,10 @@ public class PulsarProgress extends RoutineLoadProgress {
         }
     }
 
+    public Map<String, Long> getLag() {
+        return partitionToBacklogNum;
+    }
+
     @Override
     public String toString() {
         Map<String, String> showPartitionToBacklogNum = Maps.newHashMap();

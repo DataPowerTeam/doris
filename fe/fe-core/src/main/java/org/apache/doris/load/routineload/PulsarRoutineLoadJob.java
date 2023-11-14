@@ -668,7 +668,7 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
 
     @Override
     protected String getLag() {
-        List<Long> partitionIdToOffsetLag = ((PulsarProgress) progress).getBacklogNums();
+        Map<String, Long> partitionIdToOffsetLag = ((PulsarProgress) progress).getLag();
         Gson gson = new Gson();
         return gson.toJson(partitionIdToOffsetLag);
     }

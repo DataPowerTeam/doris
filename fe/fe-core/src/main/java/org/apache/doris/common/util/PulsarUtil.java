@@ -56,6 +56,11 @@ public class PulsarUtil {
         return PROXY_API.getBacklogNums(serviceUrl, topic, subscription, properties, partitions);
     }
 
+    public static List<InternalService.PPulsarBacklogProxyResult> getBatchBacklogNums(
+            List<InternalService.PPulsarBacklogProxyRequest> requests) throws UserException {
+        return PROXY_API.getBatchBacklogNums(requests);
+    }
+
     public static InternalService.PPulsarLoadInfo genPPulsarLoadInfo(String serviceUrl,
                                                                      String topic, String subscription,
                                                    ImmutableMap<String, String> properties) {
@@ -112,6 +117,24 @@ public class PulsarUtil {
                 partitionBacklogs.put(result.getPulsarBacklogResult().getPartitionsList().get(i), backlogs.get(i));
             }
             return partitionBacklogs;
+        }
+
+        public List<InternalService.PPulsarBacklogProxyResult> getBatchBacklogNums(
+                List<InternalService.PPulsarBacklogProxyRequest> requests)
+                throws UserException {
+            // create request
+            InternalService.PPulsarBacklogBatchProxyRequest pPulsarBacklogBatchProxyRequest =
+                    InternalService.PPulsarBacklogBatchProxyRequest.newBuilder();
+            for (InternalService.PPulsarBacklogProxyRequest request : requests) {
+                pPulsarBacklogBatchProxyRequest.addRequests(request);
+            }
+            InternalService.PPulsarProxyRequest pProxyRequest = InternalService.PPulsarProxyRequest.newBuilder()
+                    .setPulsarBacklogBatchRequest(pPulsarBacklogBatchProxyRequest).build();
+
+            // send request
+            PPulsarProxyResult result = sendProxyRequest(pProxyRequest);
+
+            return result.pulsarBacklogBatchResult.results;
         }
 
         private InternalService.PPulsarProxyResult sendProxyRequest(
