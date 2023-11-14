@@ -312,29 +312,6 @@ strip_lib() {
     fi
 }
 
-# librdkafka
-build_librdkafka() {
-    check_if_source_exist "${LIBRDKAFKA_SOURCE}"
-
-    cd "${TP_SOURCE_DIR}/${LIBRDKAFKA_SOURCE}"
-
-    # NOTE(amos): librdkafka uses a weird autoconf variant (mklove) which doesn't allow extending PKG_CONFIG with spaces in cmd.
-    # As a result, we use a patch to hard code "--static" into PKG_CONFIG instead.
-    # PKG_CONFIG="pkg-config --static"
-
-    CPPFLAGS="-I${TP_INCLUDE_DIR}" \
-        LDFLAGS="-L${TP_LIB_DIR} -lssl -lcrypto -lzstd -lz -lsasl2 \
-        -lgssapi_krb5 -lkrb5 -lkrb5support -lk5crypto -lcom_err -lresolv" \
-        ./configure --prefix="${TP_INSTALL_DIR}" --enable-static --enable-sasl --disable-c11threads
-
-    make -j "${PARALLEL}"
-    make install
-
-    remove_all_dylib
-    strip_lib librdkafka.a
-    strip_lib librdkafka++.a
-}
-
 # pulsar
 build_pulsar() {
     check_if_source_exist "${PULSAR_SOURCE}"
@@ -351,6 +328,7 @@ build_pulsar() {
 
 if [[ "${#packages[@]}" -eq 0 ]]; then
     packages=(
+        boost
         pulsar
     )
     if [[ "$(uname -s)" == 'Darwin' ]]; then

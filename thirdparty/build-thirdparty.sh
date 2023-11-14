@@ -1745,6 +1745,7 @@ if [[ "${#packages[@]}" -eq 0 ]]; then
         krb5 # before cyrus_sasl
         cyrus_sasl
         librdkafka
+        pulsar
         flatbuffers
         orc
         cares
