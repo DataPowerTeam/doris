@@ -523,11 +523,6 @@ if [[ "${#packages[@]}" -eq 0 ]]; then
         curl
         pulsar
     )
-    if [[ "$(uname -s)" == 'Darwin' ]]; then
-        read -r -a packages <<<"binutils gettext ${packages[*]}"
-    elif [[ "$(uname -s)" == 'Linux' ]]; then
-        read -r -a packages <<<"${packages[*]} hadoop_libs"
-    fi
 fi
 
 for package in "${packages[@]}"; do
