@@ -527,11 +527,11 @@ Status Compaction::do_compaction_impl(int64_t permits) {
               << ", input_row_num=" << _input_row_num
               << ", output_row_num=" << _output_rowset->num_rows()
               << ". elapsed time=" << watch.get_elapse_second()
-              << ". step1 eplased time=" << step1_elapse
-              << ". step2 eplased time=" << step2_elapse
-              << ". step3 eplased time=" << step3_elapse
-              << ". step4 eplased time=" << step4_elapse
-              << ". step5 eplased time=" << step5_elapse
+              << "s. step1 eplased time=" << step1_elapse
+              << "s. step2 eplased time=" << step2_elapse
+              << "s. step3 eplased time=" << step3_elapse
+              << "s. step4 eplased time=" << step4_elapse
+              << "s. step5 eplased time=" << step5_elapse
               << "s. cumulative_compaction_policy=" << cumu_policy->name()
               << ", compact_row_per_second=" << int(_input_row_num / watch.get_elapse_second());
 
