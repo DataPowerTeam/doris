@@ -333,6 +333,7 @@ Status Compaction::do_compaction_impl(int64_t permits) {
     if (compaction_type() == ReaderType::READER_COLD_DATA_COMPACTION) {
         Tablet::add_pending_remote_rowset(_output_rs_writer->rowset_id().to_string());
     }
+    double step1_elapse = watch.get_elapse_second();
 
     // 2. write merged rows to output rowset
     // The test results show that merger is low-memory-footprint, there is no need to tracker its mem pool
@@ -396,6 +397,8 @@ Status Compaction::do_compaction_impl(int64_t permits) {
     COUNTER_UPDATE(_output_rowset_data_size_counter, _output_rowset->data_disk_size());
     COUNTER_UPDATE(_output_row_num_counter, _output_rowset->num_rows());
     COUNTER_UPDATE(_output_segments_num_counter, _output_rowset->num_segments());
+
+    double step2_elapse = watch.get_elapse_second();
 
     // 3. check correctness
     RETURN_IF_ERROR(check_correctness(stats));
@@ -484,8 +487,12 @@ Status Compaction::do_compaction_impl(int64_t permits) {
         }
     }
 
+    double step3_elapse = watch.get_elapse_second();
+
     // 4. modify rowsets in memory
     RETURN_IF_ERROR(modify_rowsets(&stats));
+
+    double step4_elapse = watch.get_elapse_second();
 
     // 5. update last success compaction time
     int64_t now = UnixMillis();
@@ -509,6 +516,8 @@ Status Compaction::do_compaction_impl(int64_t permits) {
         }
     }
 
+    double step5_elapse = watch.get_elapse_second();
+
     auto cumu_policy = _tablet->cumulative_compaction_policy();
     DCHECK(cumu_policy);
     LOG(INFO) << "succeed to do " << compaction_name() << " is_vertical=" << vertical_compaction
@@ -518,6 +527,11 @@ Status Compaction::do_compaction_impl(int64_t permits) {
               << ", input_row_num=" << _input_row_num
               << ", output_row_num=" << _output_rowset->num_rows()
               << ". elapsed time=" << watch.get_elapse_second()
+              << ". step1 eplased time=" << step1_elapse
+              << ". step2 eplased time=" << step2_elapse
+              << ". step3 eplased time=" << step3_elapse
+              << ". step4 eplased time=" << step4_elapse
+              << ". step5 eplased time=" << step5_elapse
               << "s. cumulative_compaction_policy=" << cumu_policy->name()
               << ", compact_row_per_second=" << int(_input_row_num / watch.get_elapse_second());
 
