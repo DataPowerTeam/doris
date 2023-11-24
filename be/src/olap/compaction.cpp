@@ -367,6 +367,7 @@ Status Compaction::do_compaction_impl(int64_t permits) {
     COUNTER_UPDATE(_merged_rows_counter, stats.merged_rows);
     COUNTER_UPDATE(_filtered_rows_counter, stats.filtered_rows);
 
+    double step2_1_elapse = watch.get_elapse_second();
     _output_rowset = _output_rs_writer->build();
     if (_output_rowset == nullptr) {
         return Status::Error<ROWSET_BUILDER_INIT>("rowset writer build failed. output_version: {}",
@@ -390,7 +391,9 @@ Status Compaction::do_compaction_impl(int64_t permits) {
         // now version in delete_predicate is deprecated
         if (!delete_predicate.in_predicates().empty() ||
             !delete_predicate.sub_predicates().empty()) {
+            LOG(INFO) << "start do delete row set, tableId=" << _tablet->full_name();
             _output_rowset->rowset_meta()->set_delete_predicate(std::move(delete_predicate));
+            LOG(INFO) << "finish do delete row set, tableId=" << _tablet->full_name();
         }
     }
 
@@ -529,6 +532,7 @@ Status Compaction::do_compaction_impl(int64_t permits) {
               << ". elapsed time=" << watch.get_elapse_second()
               << "s. step1 eplased time=" << step1_elapse
               << "s. step2 eplased time=" << step2_elapse
+              << "s. step2.1 eplased time=" << step2_1_elapse
               << "s. step3 eplased time=" << step3_elapse
               << "s. step4 eplased time=" << step4_elapse
               << "s. step5 eplased time=" << step5_elapse
