@@ -205,6 +205,7 @@ Status Merger::vertical_compact_one_group(
 
     TabletSchemaSPtr merge_tablet_schema = std::make_shared<TabletSchema>();
     merge_tablet_schema->copy_from(*tablet_schema);
+    VLOG_NOTICE << "vertical compact one group, get lock, tablet id: " << tablet->full_name();
     {
         std::shared_lock rdlock(tablet->get_header_lock());
         auto delete_preds = tablet->delete_predicates();
@@ -237,9 +238,11 @@ Status Merger::vertical_compact_one_group(
         }
     }
 
+    VLOG_NOTICE << "vertical compact one group, create block, tablet id: " << tablet->full_name();
     vectorized::Block block = tablet_schema->create_block(reader_params.return_columns);
     size_t output_rows = 0;
     bool eof = false;
+    VLOG_NOTICE << "vertical compact one group, add column, tablet id: " << tablet->full_name();
     while (!eof && !StorageEngine::instance()->stopped()) {
         // Read one block from block reader
         RETURN_NOT_OK_STATUS_WITH_WARN(
