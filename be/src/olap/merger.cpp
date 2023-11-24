@@ -190,7 +190,8 @@ Status Merger::vertical_compact_one_group(
         const std::vector<RowsetReaderSharedPtr>& src_rowset_readers,
         RowsetWriter* dst_rowset_writer, int64_t max_rows_per_segment, Statistics* stats_output) {
     // build tablet reader
-    VLOG_NOTICE << "vertical compact one group, max_rows_per_segment=" << max_rows_per_segment;
+    VLOG_NOTICE << "vertical compact one group, max_rows_per_segment=" << max_rows_per_segment 
+                << ", tablet id: " << tablet->full_name();
     vectorized::VerticalBlockReader reader(row_source_buf);
     TabletReader::ReaderParams reader_params;
     reader_params.is_key_column_group = is_key;
@@ -350,7 +351,7 @@ Status Merger::vertical_merge_rowsets(TabletSharedPtr tablet, ReaderType reader_
                                                  reader_type);
     // compact group one by one
     for (auto i = 0; i < column_groups.size(); ++i) {
-        VLOG_NOTICE << "row source size: " << row_sources_buf.total_size() << ", tablet_id: " << tablet->table_id();
+        VLOG_NOTICE << "row source size: " << row_sources_buf.total_size() << ", tablet_id: " << tablet->tablet_id();
         bool is_key = (i == 0);
         RETURN_IF_ERROR(vertical_compact_one_group(
                 tablet, reader_type, tablet_schema, is_key, column_groups[i], &row_sources_buf,
