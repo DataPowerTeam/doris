@@ -360,7 +360,7 @@ Status Merger::vertical_merge_rowsets(TabletSharedPtr tablet, ReaderType reader_
     }
 
     // finish compact, build output rowset
-    VLOG_NOTICE << "finish compact groups, table id: " << tablet->table_id();
+    VLOG_NOTICE << "finish compact groups, table id: " << tablet->tablet_id();
     RETURN_IF_ERROR(dst_rowset_writer->final_flush());
 
     return Status::OK();
