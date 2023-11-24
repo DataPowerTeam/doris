@@ -267,9 +267,11 @@ Status Merger::vertical_compact_one_group(
         stats_output->merged_rows = reader.merged_rows();
         stats_output->filtered_rows = reader.filtered_rows();
     }
+    OlapStopWatch watch;
     VLOG_NOTICE << "Start to flush columns, tabletId=" << tablet->full_name();
     RETURN_IF_ERROR(dst_rowset_writer->flush_columns(is_key));
-    VLOG_NOTICE << "Finish to flush columns, tabletId=" << tablet->full_name();
+    VLOG_NOTICE << "Finish to flush columns, tabletId=" << tablet->full_name() 
+                << ", eplased time=" << watch.get_elapse_second() << "s.";
 
     return Status::OK();
 }
@@ -360,7 +362,7 @@ Status Merger::vertical_merge_rowsets(TabletSharedPtr tablet, ReaderType reader_
     }
 
     // finish compact, build output rowset
-    VLOG_NOTICE << "finish compact groups, table id: " << tablet->tablet_id();
+    VLOG_NOTICE << "finish compact groups, tablet id: " << tablet->tablet_id();
     RETURN_IF_ERROR(dst_rowset_writer->final_flush());
 
     return Status::OK();
