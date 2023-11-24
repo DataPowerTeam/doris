@@ -350,7 +350,7 @@ Status Merger::vertical_merge_rowsets(TabletSharedPtr tablet, ReaderType reader_
                                                  reader_type);
     // compact group one by one
     for (auto i = 0; i < column_groups.size(); ++i) {
-        VLOG_NOTICE << "row source size: " << row_sources_buf.total_size();
+        VLOG_NOTICE << "row source size: " << row_sources_buf.total_size() << ", tablet_id: " << tablet->table_id();
         bool is_key = (i == 0);
         RETURN_IF_ERROR(vertical_compact_one_group(
                 tablet, reader_type, tablet_schema, is_key, column_groups[i], &row_sources_buf,
@@ -358,7 +358,9 @@ Status Merger::vertical_merge_rowsets(TabletSharedPtr tablet, ReaderType reader_
         if (is_key) {
             row_sources_buf.flush();
         }
+        VLOG_NOTICE << "start seek to begin, tablet_id: " << tablet->table_id();
         row_sources_buf.seek_to_begin();
+        VLOG_NOTICE << "end seek to begin, tablet_id: " << tablet->table_id();
     }
 
     // finish compact, build output rowset
