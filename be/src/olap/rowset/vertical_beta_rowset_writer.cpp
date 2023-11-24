@@ -136,10 +136,12 @@ Status VerticalBetaRowsetWriter::add_columns(const vectorized::Block* block,
 Status VerticalBetaRowsetWriter::_flush_columns(
         std::unique_ptr<segment_v2::SegmentWriter>* segment_writer, bool is_key) {
     uint64_t index_size = 0;
-    VLOG_NOTICE << "flush columns index: " << _cur_writer_idx;
+    VLOG_NOTICE << "flush columns data: " << _cur_writer_idx << ", tableId=" << _context.tablet_id;
     RETURN_IF_ERROR((*segment_writer)->finalize_columns_data());
+    VLOG_NOTICE << "flush columns index: " << _cur_writer_idx << ", tableId=" << _context.tablet_id;
     RETURN_IF_ERROR((*segment_writer)->finalize_columns_index(&index_size));
     if (is_key) {
+        VLOG_NOTICE << "flush columns key: " << _cur_writer_idx << ", tableId=" << _context.tablet_id;
         _total_key_group_rows += (*segment_writer)->row_count();
         // record segment key bound
         KeyBoundsPB key_bounds;
@@ -154,6 +156,7 @@ Status VerticalBetaRowsetWriter::_flush_columns(
     }
     _total_index_size +=
             static_cast<int64_t>(index_size) + (*segment_writer)->get_inverted_index_file_size();
+    VLOG_NOTICE << "flush columns done: " << _cur_writer_idx << ", tableId=" << _context.tablet_id;
     return Status::OK();
 }
 

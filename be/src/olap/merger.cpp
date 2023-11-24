@@ -267,7 +267,9 @@ Status Merger::vertical_compact_one_group(
         stats_output->merged_rows = reader.merged_rows();
         stats_output->filtered_rows = reader.filtered_rows();
     }
+    VLOG_NOTICE << "Start to flush columns, tabletId=" << tablet->full_name();
     RETURN_IF_ERROR(dst_rowset_writer->flush_columns(is_key));
+    VLOG_NOTICE << "Finish to flush columns, tabletId=" << tablet->full_name();
 
     return Status::OK();
 }
