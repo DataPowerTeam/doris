@@ -358,9 +358,9 @@ Status Merger::vertical_merge_rowsets(TabletSharedPtr tablet, ReaderType reader_
         if (is_key) {
             row_sources_buf.flush();
         }
-        VLOG_NOTICE << "start seek to begin, tablet_id: " << tablet->table_id();
+        VLOG_NOTICE << "start seek to begin, tablet_id: " << tablet->tablet_id();
         row_sources_buf.seek_to_begin();
-        VLOG_NOTICE << "end seek to begin, tablet_id: " << tablet->table_id();
+        VLOG_NOTICE << "end seek to begin, tablet_id: " << tablet->tablet_id();
     }
 
     // finish compact, build output rowset
