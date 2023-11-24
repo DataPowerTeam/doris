@@ -242,7 +242,8 @@ Status Merger::vertical_compact_one_group(
     vectorized::Block block = tablet_schema->create_block(reader_params.return_columns);
     size_t output_rows = 0;
     bool eof = false;
-    VLOG_NOTICE << "vertical compact one group, add column, tablet id: " << tablet->full_name();
+    VLOG_NOTICE << "vertical compact one group, add column, tablet id: " << tablet->full_name()
+                << "column name: " << tablet_schema->column(column_group[0]).name();
     while (!eof && !StorageEngine::instance()->stopped()) {
         // Read one block from block reader
         RETURN_NOT_OK_STATUS_WITH_WARN(
