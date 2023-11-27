@@ -244,14 +244,20 @@ Status Merger::vertical_compact_one_group(
     bool eof = false;
     VLOG_NOTICE << "vertical compact one group, add column, tablet id: " << tablet->full_name()
                 << ", column name: " << tablet_schema->column(column_group[0]).name();
+    double read_eplased_time = 0.0;
+    double write_eplased_time = 0.0;
     while (!eof && !StorageEngine::instance()->stopped()) {
         // Read one block from block reader
+        OlapStopWatch read_watch;
         RETURN_NOT_OK_STATUS_WITH_WARN(
                 reader.next_block_with_aggregation(&block, &eof),
                 "failed to read next block when merging rowsets of tablet " + tablet->full_name());
+        read_eplased_time = read_eplased_time + read_watch.get_elapse_second();
+        OlapStopWatch write_watch;
         RETURN_NOT_OK_STATUS_WITH_WARN(
                 dst_rowset_writer->add_columns(&block, column_group, is_key, max_rows_per_segment),
                 "failed to write block when merging rowsets of tablet " + tablet->full_name());
+        write_eplased_time = write_eplased_time + write_watch.get_elapse_second();
 
         if (is_key && reader_params.record_rowids && block.rows() > 0) {
             std::vector<uint32_t> segment_num_rows;
@@ -262,6 +268,10 @@ Status Merger::vertical_compact_one_group(
         output_rows += block.rows();
         block.clear_column_data();
     }
+    VLOG_NOTICE << "vertical compact one group, add column done, tablet id: " << tablet->full_name()
+                << ", column name: " << tablet_schema->column(column_group[0]).name()
+                << ", read time: " << read_eplased_time
+                << ", write time: " << write_eplased_time;
     if (StorageEngine::instance()->stopped()) {
         return Status::Error<INTERNAL_ERROR>("tablet {} failed to do compaction, engine stopped",
                                              tablet->full_name());
@@ -371,6 +381,7 @@ Status Merger::vertical_merge_rowsets(TabletSharedPtr tablet, ReaderType reader_
     // finish compact, build output rowset
     VLOG_NOTICE << "finish compact groups, tablet id: " << tablet->tablet_id();
     RETURN_IF_ERROR(dst_rowset_writer->final_flush());
+    VLOG_NOTICE << "finish flush rowset, tablet id: " << tablet->tablet_id();
 
     return Status::OK();
 }

@@ -217,6 +217,8 @@ Status VerticalBetaRowsetWriter::final_flush() {
     for (auto& segment_writer : _segment_writers) {
         uint64_t segment_size = 0;
         //uint64_t footer_position = 0;
+        LOG(INFO) << "Start to finalize footer, tablet id: " << _context.tablet->tablet_id() 
+                  << ", segment id: " << segment_writer->get_segment_id();
         auto st = segment_writer->finalize_footer(&segment_size);
         if (!st.ok()) {
             LOG(WARNING) << "Fail to finalize segment footer, " << st;
@@ -224,6 +226,8 @@ Status VerticalBetaRowsetWriter::final_flush() {
         }
         _total_data_size += segment_size + segment_writer->get_inverted_index_file_size();
         segment_writer.reset();
+        LOG(INFO) << "Finish to finalize footer, tablet id: " << _context.tablet->tablet_id()
+                  << ", segment id: " << segment_writer->get_segment_id();
     }
     return Status::OK();
 }
