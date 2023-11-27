@@ -275,7 +275,9 @@ Status Merger::vertical_compact_one_group(
     VLOG_NOTICE << "vertical compact one group, add column done, tablet id: " << tablet->full_name()
                 << ", column name: " << tablet_schema->column(column_group[0]).name()
                 << ", read time: " << read_eplased_time
-                << ", write time: " << write_eplased_time;
+                << ", write time: " << write_eplased_time
+                << ", all time: " << (write_eplased_time + read_eplased_time)
+                << ", rows: " << output_rows;
     if (StorageEngine::instance()->stopped()) {
         return Status::Error<INTERNAL_ERROR>("tablet {} failed to do compaction, engine stopped",
                                              tablet->full_name());
