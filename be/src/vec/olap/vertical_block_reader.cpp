@@ -130,11 +130,13 @@ Status VerticalBlockReader::_init_collect_iter(const ReaderParams& read_params) 
             seq_col_idx = read_params.tablet->tablet_schema()->sequence_col_idx();
         }
         if (read_params.tablet->tablet_schema()->num_key_columns() == 0) {
+            LOG(INFO) << "Create vertical fifo merge iter";
             _vcollect_iter = new_vertical_fifo_merge_iterator(
                     std::move(*segment_iters_ptr), iterator_init_flag, rowset_ids,
                     ori_return_col_size, read_params.tablet->keys_type(), seq_col_idx,
                     _row_sources_buffer);
         } else {
+            LOG(INFO) << "Create vertical heap merge iter";
             _vcollect_iter = new_vertical_heap_merge_iterator(
                     std::move(*segment_iters_ptr), iterator_init_flag, rowset_ids,
                     ori_return_col_size, read_params.tablet->keys_type(), seq_col_idx,
