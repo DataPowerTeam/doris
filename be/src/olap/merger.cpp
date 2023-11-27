@@ -238,7 +238,8 @@ Status Merger::vertical_compact_one_group(
         }
     }
 
-    VLOG_NOTICE << "vertical compact one group, create block, tablet id: " << tablet->full_name();
+    VLOG_NOTICE << "vertical compact one group, create block, tablet id: " << tablet->full_name()
+                << ", is key: " << is_key;
     vectorized::Block block = tablet_schema->create_block(reader_params.return_columns);
     size_t output_rows = 0;
     bool eof = false;
@@ -258,6 +259,9 @@ Status Merger::vertical_compact_one_group(
                 dst_rowset_writer->add_columns(&block, column_group, is_key, max_rows_per_segment),
                 "failed to write block when merging rowsets of tablet " + tablet->full_name());
         write_eplased_time = write_eplased_time + write_watch.get_elapse_second();
+
+        VLOG_NOTICE << "loop read block and add columns, tablet id: " << tablet->full_name()
+                    << ", records: " << block.rows();
 
         if (is_key && reader_params.record_rowids && block.rows() > 0) {
             std::vector<uint32_t> segment_num_rows;
