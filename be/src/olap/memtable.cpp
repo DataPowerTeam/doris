@@ -500,6 +500,8 @@ Status MemTable::flush() {
     // and use the ids to load segment data file for calc delete bitmap.
     int64_t duration_ns;
     SCOPED_RAW_TIMER(&duration_ns);
+    VLOG_CRITICAL << "begin do flush memtable for tablet: " << tablet_id()
+                  << ", flushsize: " << _flush_size;
     SKIP_MEMORY_CHECK(RETURN_IF_ERROR(_do_flush()));
     _delta_writer_callback(_stat);
     DorisMetrics::instance()->memtable_flush_total->increment(1);
