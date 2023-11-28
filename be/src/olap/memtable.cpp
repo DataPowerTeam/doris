@@ -511,6 +511,8 @@ Status MemTable::flush() {
 }
 
 Status MemTable::_do_flush() {
+    VLOG_CRITICAL << "do flush memtable for tablet: " << tablet_id()
+                  << ", flushsize: " << _flush_size;
     SCOPED_CONSUME_MEM_TRACKER(_flush_mem_tracker);
     size_t same_keys_num = _sort();
     if (_keys_type == KeysType::DUP_KEYS || same_keys_num == 0) {
@@ -537,6 +539,7 @@ Status MemTable::_do_flush() {
     }
     ctx.segment_id = _segment_id;
     SCOPED_RAW_TIMER(&_stat.segment_writer_ns);
+    VLOG_CRITICAL << "flush single memtable, tablet id: " << tablet_id();
     RETURN_IF_ERROR(_rowset_writer->flush_single_memtable(&block, &_flush_size, &ctx));
     return Status::OK();
 }
