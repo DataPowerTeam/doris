@@ -338,12 +338,15 @@ Status BetaRowsetWriter::_segcompaction_if_necessary() {
     LOG(INFO) << "segment if necessary, config enable segcomaction: "
               << config::enable_segcompaction
               << ", context enable segcompaction: " << _context.enable_segcompaction
-              << ", tablet id: " << _context.tablet_id;
+              << ", tablet id: " << _context.tablet_id
+              << ", segment size: " << _num_segment
+              << ", segcompacted point: " << _segcompacted_point;
     if (!config::enable_segcompaction || !_context.enable_segcompaction ||
         !_check_and_set_is_doing_segcompaction()) {
         return status;
     }
     if (_segcompaction_status.load() != OK) {
+        LOG(INFO) << "segcompaction meed invalid state, tablet id: " << _context.tablet_id;
         status = Status::Error<SEGCOMPACTION_FAILED>(
                 "BetaRowsetWriter::_segcompaction_if_necessary meet invalid state");
     } else if ((_num_segment - _segcompacted_point) >= config::segcompaction_batch_size) {
