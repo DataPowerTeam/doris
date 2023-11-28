@@ -335,6 +335,10 @@ bool BetaRowsetWriter::_check_and_set_is_doing_segcompaction() {
 
 Status BetaRowsetWriter::_segcompaction_if_necessary() {
     Status status = Status::OK();
+    LOG(INFO) << "segment if necessary, config enable segcomaction: "
+              << config::enable_segcompaction
+              << ", context enable segcompaction: " << _context.enable_segcompaction
+              << ", tablet id: " << _context.tablet_id;
     if (!config::enable_segcompaction || !_context.enable_segcompaction ||
         !_check_and_set_is_doing_segcompaction()) {
         return status;
@@ -461,6 +465,7 @@ Status BetaRowsetWriter::flush() {
 
 Status BetaRowsetWriter::flush_single_memtable(const vectorized::Block* block, int64* flush_size,
                                                const FlushContext* ctx) {
+    LOG(INFO) << "flush single memtable, block size: " << block->rows();
     if (block->rows() == 0) {
         return Status::OK();
     }
