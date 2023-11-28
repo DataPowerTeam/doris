@@ -244,7 +244,8 @@ Status Merger::vertical_compact_one_group(
     size_t output_rows = 0;
     bool eof = false;
     VLOG_NOTICE << "vertical compact one group, add column, tablet id: " << tablet->full_name()
-                << ", column name: " << tablet_schema->column(column_group[0]).name();
+                << ", column name: " << tablet_schema->column(column_group[0]).name()
+                << ", created block size: " << block.rows();
     double read_eplased_time = 0.0;
     double write_eplased_time = 0.0;
     while (!eof && !StorageEngine::instance()->stopped()) {
@@ -253,6 +254,8 @@ Status Merger::vertical_compact_one_group(
         RETURN_NOT_OK_STATUS_WITH_WARN(
                 reader.next_block_with_aggregation(&block, &eof),
                 "failed to read next block when merging rowsets of tablet " + tablet->full_name());
+        VLOG_NOTICE << "loop read blocks, tablet id: " << tablet->full_name()
+                    << ", records: " << block.rows();
         read_eplased_time = read_eplased_time + read_watch.get_elapse_second();
         OlapStopWatch write_watch;
         RETURN_NOT_OK_STATUS_WITH_WARN(
@@ -260,7 +263,7 @@ Status Merger::vertical_compact_one_group(
                 "failed to write block when merging rowsets of tablet " + tablet->full_name());
         write_eplased_time = write_eplased_time + write_watch.get_elapse_second();
 
-        VLOG_NOTICE << "loop read block and add columns, tablet id: " << tablet->full_name()
+        VLOG_NOTICE << "loop add columns, tablet id: " << tablet->full_name()
                     << ", records: " << block.rows();
 
         if (is_key && reader_params.record_rowids && block.rows() > 0) {
