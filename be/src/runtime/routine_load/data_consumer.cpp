@@ -559,7 +559,7 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
             }
             if (!queue->blocking_put(msg.get())) {
                 // queue is shutdown
-                LOG(INFO) << "queue is shutdown, failed to blocking put" << message_str
+                LOG(INFO) << "queue is shutdown, failed to blocking put"
                           << ", len: " << message_str.size()
                           << ", message id: " << msg_id
                           << ", pulsar consumer: " << _id
@@ -661,6 +661,22 @@ Status PulsarDataConsumer::reset() {
 
 Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id) {
     pulsar::Result res = _p_consumer.acknowledgeCumulative(message_id);
+    if (res != pulsar::ResultOk) {
+        std::stringstream ss;
+        ss << "failed to acknowledge pulsar message : " << res;
+        LOG(WARNING) << "failed to acknowledge pulsar message : " << res
+                     << ",pulsar consumer :" << _id
+                     << ",pulsar group :" << _grp_id;
+        return Status::InternalError(ss.str());
+    }
+    LOG(INFO) << "acknowledge cumulative message_id :" << message_id
+              << ",pulsar consumer :" << _id
+              << ",pulsar group :" << _grp_id;
+    return Status::OK();
+}
+
+Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id) {
+    pulsar::Result res = _p_consumer.acknowledge(message_id);
     if (res != pulsar::ResultOk) {
         std::stringstream ss;
         ss << "failed to acknowledge pulsar message : " << res;

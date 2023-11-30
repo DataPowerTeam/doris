@@ -428,6 +428,18 @@ void PulsarDataConsumerGroup::acknowledge_cumulative(std::shared_ptr<StreamLoadC
     }
 }
 
+void PulsarDataConsumerGroup::acknowledge(pulsar::MessageId& message_id) {
+    for (auto& consumer : _consumers) {
+        // do ack
+        Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge(kv.second);
+        if (!st.ok()) {
+            LOG(WARNING) << "failed to ack message id: " << message_id << ", consumer: " << consumer;
+        } else {
+            break;
+        }
+    }
+}
+
 std::string PulsarDataConsumerGroup::substring_prefix_json(std::string data) {
     // 找到以 "{" 开头的位置
     size_t startPos = data.find("{\"");
