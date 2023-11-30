@@ -555,17 +555,15 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", len: " << message_str.size()
                           << ", message id: " << msg_id
                           << ", pulsar consumer: " << _id
-                          << ", grp: " << _grp_id
-                          << ", rows size: " << rows.size();
+                          << ", grp: " << _grp_id;
             }
             if (!queue->blocking_put(msg.get())) {
                 // queue is shutdown
-                LOG(INFO) << "queue is shutdown, failed to blocking put" << new_msg->getDataAsString()
-                          << ", len: " << new_msg->getLength()
+                LOG(INFO) << "queue is shutdown, failed to blocking put" << message_str
+                          << ", len: " << message_str.size()
                           << ", message id: " << msg_id
                           << ", pulsar consumer: " << _id
-                          << ", grp: " << _grp_id
-                          << ", rows size: " << rows.size();
+                          << ", grp: " << _grp_id;
                 done = true;
             } else {
                 ++put_rows;
