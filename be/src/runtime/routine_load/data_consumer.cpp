@@ -542,18 +542,12 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
 
         bool done = false;
         auto msg = std::make_unique<pulsar::Message>();
-        std::vector<const char*> rows;
-        std::string filter_data;
-        pulsar::Message* new_msg;
         // consume 1 message at a time
         consumer_watch.start();
         pulsar::Result res = _p_consumer.receive(*(msg.get()), 30000 /* timeout, ms */);
         consumer_watch.stop();
         switch (res) {
         case pulsar::ResultOk:
-            //filter invalid prefix of json
-            filter_data = substring_prefix_json(msg.get()->getDataAsString());
-            rows = convert_rows(filter_data.c_str());
             msg_id = msg.get()->getMessageId();
             message_str = msg.get()->getDataAsString();
             if (received_rows == 0) {
@@ -564,47 +558,20 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", grp: " << _grp_id
                           << ", rows size: " << rows.size();
             }
-//            if (msg.get()->getDataAsString().find("\"country\":\"PL\"") != std::string::npos) {
-//                LOG(INFO) << "receive pulsar message "
-//                          << ", len: " << msg.get()->getLength()
-//                          << ", message id: " << msg_id
-//                          << ", pulsar consumer: " << _id
-//                          << ", grp: " << _grp_id
-//                          << ", rows size: " << rows.size();
-//            }
-            for (const char* row : rows) {
-                pulsar::MessageBuilder messageBuilder;
-                size_t row_len = len_of_actual_data(row);
-                messageBuilder.setContent(row, row_len);
-                messageBuilder.setProperty("topicName",msg.get()->getTopicName());
-                new_msg = new pulsar::Message(messageBuilder.build());
-                new_msg->setMessageId(msg_id);
-
-                if (new_msg->getDataAsString().find("{\"") == std::string::npos) {
-                    // ignore msg with length 0.
-                    // put empty msg into queue will cause the load process shutting down.
-                    LOG(INFO) << "pass error message: " << new_msg->getDataAsString();
-                    break;
-                } else if (!queue->blocking_put(&(*new_msg))) {
-                    // queue is shutdown
-                    LOG(INFO) << "queue is shutdown, failed to blocking put" << new_msg->getDataAsString()
-                              << ", len: " << new_msg->getLength()
-                              << ", message id: " << msg_id
-                              << ", pulsar consumer: " << _id
-                              << ", grp: " << _grp_id
-                              << ", rows size: " << rows.size();
-                    done = true;
-                } else {
-                    ++put_rows;
-                }
-                ++received_rows;
+            if (!queue->blocking_put(msg.get())) {
+                // queue is shutdown
+                LOG(INFO) << "queue is shutdown, failed to blocking put" << new_msg->getDataAsString()
+                          << ", len: " << new_msg->getLength()
+                          << ", message id: " << msg_id
+                          << ", pulsar consumer: " << _id
+                          << ", grp: " << _grp_id
+                          << ", rows size: " << rows.size();
+                done = true;
+            } else {
+                ++put_rows;
             }
-            delete msg.get();
+            ++received_rows;
             msg.release(); // release the ownership, msg will be deleted after being processed
-            for (const char* row : rows) {
-                delete[] row;
-            }
-            rows.clear();
             break;
         case pulsar::ResultTimeout:
             // leave the status as OK, because this may happened
@@ -704,7 +671,7 @@ Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id)
                      << ",pulsar group :" << _grp_id;
         return Status::InternalError(ss.str());
     }
-    LOG(INFO) << "message_id :" << message_id
+    LOG(INFO) << "acknowledge cumulative message_id :" << message_id
               << ",pulsar consumer :" << _id
               << ",pulsar group :" << _grp_id;
     return Status::OK();

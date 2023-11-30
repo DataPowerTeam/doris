@@ -124,9 +124,11 @@ private:
 
     void get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx);
 
-    const char* filter_invalid_prefix_of_json(const char* data, std::size_t size);
+    std::string substring_prefix_json(std::string data);
 
     size_t len_of_actual_data(const char* data);
+
+    std::vector<const char*> convert_rows(const char* data);
 
     // acknowledge pulsar message
     void acknowledge_cumulative(std::shared_ptr<StreamLoadContext> ctx);
