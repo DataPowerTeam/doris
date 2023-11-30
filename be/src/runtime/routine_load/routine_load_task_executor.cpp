@@ -508,7 +508,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
             }
 
             // do ack
-            LOG(INFO) << "start to ack :" << kv.second;
+            LOG(INFO) << "start to ack  :" << kv.second;
             st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second);
             if (!st.ok()) {
                  // Pulsar Offset Acknowledgement is idempotent, Failure should not block the normal process
