@@ -291,24 +291,22 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     MonotonicStopWatch watch;
     watch.start();
     bool eos = false;
+    bool done = true;
     while (true) {
-        if (eos || left_time <= 0 || left_bytes <= 0) {
+        if (done && (eos || left_time <= 0 || left_bytes <= 0)) {
             LOG(INFO) << "consumer group done: " << _grp_id
                       << ". consume time(ms)=" << ctx->max_interval_s * 1000 - left_time
                       << ", received rows=" << received_rows << ", received bytes=" << ctx->max_batch_size - left_bytes
-                      << ", eos: " << eos << ", left_time: " << left_time << ", left_bytes: " << left_bytes
+                      << ", done: " << done << ", eos: " << eos << ", left_time: " << left_time << ", left_bytes: " << left_bytes
                       << ", blocking get time(us): " << _queue.total_get_wait_time() / 1000
                       << ", blocking put time(us): " << _queue.total_put_wait_time() / 1000;
 
+            // shutdown queue
+            _queue.shutdown();
             // cancel all consumers
             for (auto& consumer : _consumers) {
                 static_cast<void>(consumer->cancel(ctx));
             }
-
-            // sleep 3s for waitting consumer cancel done
-            std::this_thread::sleep_for(std::chrono::seconds(3));
-            // shutdown queue
-            _queue.shutdown();
 
             // waiting all threads finished
             _thread_pool.shutdown();
@@ -334,9 +332,15 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 ctx->receive_bytes = ctx->max_batch_size - left_bytes;
                 get_backlog_nums(ctx);
                 acknowledge_cumulative(ctx);
+                LOG(INFO) << "start to sleep 3s for ack of group: " << _grp_id;
+                // sleep 3s for waitting consumer cancel done
+                std::this_thread::sleep_for(std::chrono::seconds(3));
+                LOG(INFO) << "finish to sleep 3s for ack of group: " << _grp_id;
                 return Status::OK();
             }
         }
+
+        done = true;
 
         pulsar::Message* msg;
         bool res = _queue.blocking_get(&msg);
@@ -356,12 +360,12 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                // len of receive origin message from pulsar
                left_bytes -= len;
                if (ack_offset.find(partition) != ack_offset.end()) {
-                    if (msg->getDataAsString().find("\"country\":\"PL\"") != std::string::npos) {
-                        LOG(INFO) << "old message id: " << ack_offset[partition]
-                                  << ", new message id: " << msg_id;
-                    }
                     if (ack_offset[partition] < msg_id) {
                         ack_offset[partition] = msg_id;
+                    } else if (ack_offset[partition] == msg_id) {
+                        done = false;
+                        LOG(INFO) << "old message id: " << ack_offset[partition]
+                                  << ", new message id: " << msg_id << ",done: " << done;
                     }
                } else {
                     ack_offset[partition] = msg_id;

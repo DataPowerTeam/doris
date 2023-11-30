@@ -557,7 +557,7 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
             msg_id = msg.get()->getMessageId();
             message_str = msg.get()->getDataAsString();
             if (received_rows == 0) {
-                LOG(INFO) << "receive first pulsar message: " << message_str
+                LOG(INFO) << "receive first pulsar message: "
                           << ", len: " << message_str.size()
                           << ", message id: " << msg_id
                           << ", pulsar consumer: " << _id
@@ -629,12 +629,6 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
         }
     }
 
-    LOG(INFO) << "receive last pulsar message: " << message_str
-              << ", len: " << message_str.size()
-              << ", message id: " << msg_id
-              << ", pulsar consumer: " << _id
-              << ", grp: " << _grp_id;
-
 //    LOG(INFO) << "start do ack of msg_id :" << msg_id;
 //    pulsar::Result ack = _p_consumer.acknowledgeCumulative(msg_id);
 //    if (ack != pulsar::ResultOk) {
@@ -647,7 +641,7 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
               << ", left time(ms): " << left_time << ", total cost(ms): " << watch.elapsed_time() / 1000 / 1000
               << ", consume cost(ms): " << consumer_watch.elapsed_time() / 1000 / 1000
               << ", received rows: " << received_rows << ", put rows: " << put_rows
-              << ", last message id: " << msg_id;
+              << ", last message id: " << msg_id << ",len: " << message_str.size();
 
     return st;
 }
