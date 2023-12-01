@@ -491,7 +491,7 @@ Status PulsarDataConsumer::assign_partition(const std::string& partition, std::s
     // do subscribe
     pulsar::ConsumerConfiguration conf;
     conf.setConsumerType(pulsar::ConsumerExclusive);
-    conf.setAckGroupingTime(0); // 设置累积确认立即同步
+    conf.setAckGroupingTimeMs(0); // 设置累积确认立即同步
 
     pulsar::Result result;
     result = _p_client->subscribe(partition, _subscription, conf, _p_consumer);
