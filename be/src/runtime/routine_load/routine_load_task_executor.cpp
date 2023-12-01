@@ -507,15 +507,15 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
                 break;
             }
 
-            // do ack
-            LOG(INFO) << "start to ack  :" << kv.second;
-            st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second);
-            if (!st.ok()) {
-                 // Pulsar Offset Acknowledgement is idempotent, Failure should not block the normal process
-                 // So just print a warning
-                 LOG(WARNING) << st;
-            }
-            LOG(INFO) << "finish to ack :" << kv.second;
+//            // do ack
+//            LOG(INFO) << "start to ack  :" << kv.second;
+//            st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second);
+//            if (!st.ok()) {
+//                 // Pulsar Offset Acknowledgement is idempotent, Failure should not block the normal process
+//                 // So just print a warning
+//                 LOG(WARNING) << st;
+//            }
+//            LOG(INFO) << "finish to ack :" << kv.second;
 
 //            std::string topics = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition();
 //            LOG(INFO) << "pulsar consumer topic :" << topics
