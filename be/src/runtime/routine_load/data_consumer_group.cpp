@@ -301,7 +301,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                       << ", blocking put time(us): " << _queue.total_put_wait_time() / 1000;
 
             // shutdown queue
-            _queue.shutdown();
+            c
             // cancel all consumers
             for (auto& consumer : _consumers) {
                 static_cast<void>(consumer->cancel(ctx));
@@ -330,11 +330,11 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 ctx->pulsar_info->ack_offset = std::move(ack_offset);
                 ctx->receive_bytes = ctx->max_batch_size - left_bytes;
                 get_backlog_nums(ctx);
-//                acknowledge_cumulative(ctx);
-//                LOG(INFO) << "start to sleep 3s for ack of group: " << _grp_id;
-//                // sleep 3s for waitting consumer cancel done
-//                std::this_thread::sleep_for(std::chrono::seconds(3));
-//                LOG(INFO) << "finish to sleep 3s for ack of group: " << _grp_id;
+                acknowledge_cumulative(ctx);
+                LOG(INFO) << "start to sleep 3s for ack of group: " << _grp_id;
+                // sleep 3s for waitting consumer cancel done
+                std::this_thread::sleep_for(std::chrono::seconds(3));
+                LOG(INFO) << "finish to sleep 3s for ack of group: " << _grp_id;
                 return Status::OK();
             }
         }
@@ -369,7 +369,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                // len of receive origin message from pulsar
                left_bytes -= len;
                ack_offset[partition] = msg_id;
-               acknowledge(msg_id);
+//               acknowledge(msg_id);
                VLOG(3) << "consume partition" << partition << " - " << msg_id;
            } else {
                // failed to append this msg, we must stop
@@ -382,6 +382,10 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                    }
                }
            }
+           for(const char* row : rows) {
+                delete[] row;
+           }
+           row.clear();
            delete msg;
         } else {
             // queue is empty and shutdown
