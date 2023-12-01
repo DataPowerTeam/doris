@@ -301,7 +301,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                       << ", blocking put time(us): " << _queue.total_put_wait_time() / 1000;
 
             // shutdown queue
-            c
+            _queue.shutdown();
             // cancel all consumers
             for (auto& consumer : _consumers) {
                 static_cast<void>(consumer->cancel(ctx));
@@ -385,7 +385,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
            for(const char* row : rows) {
                 delete[] row;
            }
-           row.clear();
+           rows.clear();
            delete msg;
         } else {
             // queue is empty and shutdown
