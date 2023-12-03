@@ -690,7 +690,7 @@ Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id, std::strin
         return Status::InternalError(ss.str());
     }
     if (partition.find("partition-5") != std::string::npos) {
-        LOG(INFO) << "load msg id: " << msg_id;
+        LOG(INFO) << "load msg id: " << message_id;
     }
     return Status::OK();
 }

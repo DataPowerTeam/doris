@@ -436,7 +436,7 @@ void PulsarDataConsumerGroup::acknowledge_cumulative(std::shared_ptr<StreamLoadC
 void PulsarDataConsumerGroup::acknowledge(pulsar::MessageId& message_id, std::string partition) {
     for (auto& consumer : _consumers) {
         // do ack
-        Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge(message_id);
+        Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge(message_id, partition);
         if (!st.ok()) {
             LOG(WARNING) << "failed to ack message id: " << message_id << ", consumer: " << consumer;
         }
