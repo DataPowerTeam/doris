@@ -134,7 +134,7 @@ private:
     void acknowledge_cumulative(std::shared_ptr<StreamLoadContext> ctx);
 
     // acknowledge pulsar message
-    void acknowledge(pulsar::MessageId& message_id, std::string partition);
+    void acknowledge(pulsar::MessageId& message_id);
 
 private:
     // blocking queue to receive msgs from all consumers

@@ -492,6 +492,7 @@ Status PulsarDataConsumer::assign_partition(const std::string& partition, std::s
     pulsar::ConsumerConfiguration conf;
     conf.setConsumerType(pulsar::ConsumerExclusive);
     conf.setAckGroupingTimeMs(0); // 设置累积确认立即同步
+    conf.setAckGroupingMaxSize(0);
 
     pulsar::Result result;
     result = _p_client->subscribe(partition, _subscription, conf, _p_consumer);
@@ -676,11 +677,7 @@ Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id)
     return Status::OK();
 }
 
-Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id, std::string partition) {
-    LOG(INFO) << "load msg id: " << message_id << ",topic: " << _topic << ",partition: " << partition;
-    if (_topic != partition) {
-        return Status::OK();
-    }
+Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id) {
     pulsar::Result res = _p_consumer.acknowledge(message_id);
     if (res != pulsar::ResultOk) {
         std::stringstream ss;
