@@ -333,7 +333,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 acknowledge_cumulative(ctx);
                 LOG(INFO) << "start to sleep 3s for ack of group: " << _grp_id;
                 // sleep 3s for waitting consumer cancel done
-                std::this_thread::sleep_for(std::chrono::seconds(3));
+                std::this_thread::sleep_for(std::chrono::seconds(1));
                 LOG(INFO) << "finish to sleep 3s for ack of group: " << _grp_id;
                 return Status::OK();
             }
@@ -370,7 +370,9 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                left_bytes -= len;
                ack_offset[partition] = msg_id;
 //               acknowledge(msg_id);
-               VLOG(3) << "consume partition" << partition << " - " << msg_id;
+               if (partition.find("partition-0") != std::string::npos) {
+                    LOG(INFO) << "load msg id: " << msg_id;
+               }
            } else {
                // failed to append this msg, we must stop
                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg=" << st.to_string();
