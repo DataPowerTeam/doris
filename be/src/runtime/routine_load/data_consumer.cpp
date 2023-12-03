@@ -677,6 +677,7 @@ Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id)
 }
 
 Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id, std::string partition) {
+    LOG(INFO) << "load msg id: " << message_id << ",topic: " << _topic << ",partition: " << partition;
     if (_topic != partition) {
         return Status::OK();
     }
@@ -688,9 +689,6 @@ Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id, std::strin
                      << ",pulsar consumer :" << _id
                      << ",pulsar group :" << _grp_id;
         return Status::InternalError(ss.str());
-    }
-    if (partition.find("partition-5") != std::string::npos) {
-        LOG(INFO) << "load msg id: " << message_id;
     }
     return Status::OK();
 }
