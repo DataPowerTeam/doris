@@ -369,10 +369,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                // len of receive origin message from pulsar
                left_bytes -= len;
                ack_offset[partition] = msg_id;
-               acknowledge(msg_id);
-               if (partition.find("partition-3") != std::string::npos) {
-                    LOG(INFO) << "load msg id: " << msg_id;
-               }
+               acknowledge(msg_id, partition);
+               VLOG(3) << "consume partition" << partition << " - " << msg_id;
            } else {
                // failed to append this msg, we must stop
                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg=" << st.to_string();
@@ -435,7 +433,7 @@ void PulsarDataConsumerGroup::acknowledge_cumulative(std::shared_ptr<StreamLoadC
     }
 }
 
-void PulsarDataConsumerGroup::acknowledge(pulsar::MessageId& message_id) {
+void PulsarDataConsumerGroup::acknowledge(pulsar::MessageId& message_id, std::string partition) {
     for (auto& consumer : _consumers) {
         // do ack
         Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge(message_id);
