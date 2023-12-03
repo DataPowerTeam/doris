@@ -441,8 +441,6 @@ void PulsarDataConsumerGroup::acknowledge(pulsar::MessageId& message_id) {
         Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge(message_id);
         if (!st.ok()) {
             LOG(WARNING) << "failed to ack message id: " << message_id << ", consumer: " << consumer;
-        } else {
-            break;
         }
     }
 }
