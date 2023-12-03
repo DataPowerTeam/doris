@@ -370,7 +370,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                left_bytes -= len;
                ack_offset[partition] = msg_id;
                acknowledge(msg_id);
-               if (partition.find("partition-0") != std::string::npos) {
+               if (partition.find("partition-3") != std::string::npos) {
                     LOG(INFO) << "load msg id: " << msg_id;
                }
            } else {
