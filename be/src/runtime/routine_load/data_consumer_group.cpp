@@ -344,7 +344,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             // avoid repeated ack
             if (ack_offset.find(partition) != ack_offset.end() && ack_offset[partition] >= msg_id) {
-                LOG（INFO) << "Pass repeated message id: " << msg_id;
+                LOG(INFO) << "Pass repeated message id: " << msg_id;
                 left_time = ctx->max_interval_s * 1000 - watch.elapsed_time() / 1000 / 1000;
                 continue;
             }

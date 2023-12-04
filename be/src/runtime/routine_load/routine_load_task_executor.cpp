@@ -502,7 +502,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        _last_ack_offset = pulsar_info->ack_offset;
+        _last_ack_offset = ctx->pulsar_info->ack_offset;
         for (auto& kv : _last_ack_offset) {
             Status st;
             // get consumer
