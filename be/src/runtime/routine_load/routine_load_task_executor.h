@@ -92,6 +92,8 @@ private:
     std::mutex _lock;
     // task id -> load context
     std::unordered_map<UniqueId, std::shared_ptr<StreamLoadContext>> _task_map;
+
+    std::map<std::string, pulsar::MessageId> _last_ack_offset;
 };
 
 } // namespace doris

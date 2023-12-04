@@ -330,6 +330,13 @@ Status RoutineLoadTaskExecutor::submit_task(const TRoutineLoadTask& task) {
         break;
     case TLoadSourceType::PULSAR:
         ctx->pulsar_info.reset(new PulsarLoadInfo(task.pulsar_load_info));
+        if (!_last_ack_offset.empty()) {
+            ctx->pulsar_info->ack_offset = _last_ack_offset;
+            _last_ack_offset.clear();
+            for (auto& kv : ctx->pulsar_info->ack_offset) {
+                LOG(INFO) << "init pulsar_info ack_offset :" << kv.second << ", partition: " << kv.first;
+            }
+        }
         break;
     default:
         LOG(WARNING) << "unknown load source type: " << task.type;
@@ -495,7 +502,8 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        for (auto& kv : ctx->pulsar_info->ack_offset) {
+        _last_ack_offset = pulsar_info->ack_offset;
+        for (auto& kv : _last_ack_offset) {
             Status st;
             // get consumer
             std::shared_ptr<DataConsumer> consumer;
@@ -508,7 +516,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
             }
 
             // do ack
-            LOG(INFO) << "should be ack  :" << kv.second;
+            LOG(INFO) << "_last_ack_offset should be ack  :" << kv.second << ", partition: " << kv.first;
 //            st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second);
 //            if (!st.ok()) {
 //                 // Pulsar Offset Acknowledgement is idempotent, Failure should not block the normal process
