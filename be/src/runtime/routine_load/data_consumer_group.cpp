@@ -279,6 +279,10 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
     // copy one
     std::map<std::string, pulsar::MessageId> ack_offset = ctx->pulsar_info->ack_offset;
+    std::set<std::string> exist_repeated_ack;
+    for (auto& kv : ack_offset) {
+        exist_repeated_ack.insert(kv.first);
+    }
 
     //improve performance
     Status (io::PulsarConsumerPipe::*append_data)(const char* data, size_t size);
@@ -343,13 +347,18 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
             std::size_t len = msg->getLength();
 
             // avoid repeated ack
-            if (ack_offset.find(partition) != ack_offset.end()
-                    && ack_offset[partition] >= msg_id) {
-                LOG(INFO) << "Pass repeated message id: " << msg_id;
-                acknowledge(msg_id, partition);
-                left_time = ctx->max_interval_s * 1000 - watch.elapsed_time() / 1000 / 1000;
-                continue;
+            if (!exist_repeated_ack.empty()) {
+                if (exist_repeated_ack.find(partition) != exist_repeated_ack.end()) {
+                    exist_repeated_ack.erase(partition);
+                }
+                if (ack_offset.find(partition) != ack_offset.end() && ack_offset[partition] >= msg_id) {
+                    LOG(INFO) << "Pass repeated message id: " << msg_id;
+                    acknowledge(msg_id, partition);
+                    left_time = ctx->max_interval_s * 1000 - watch.elapsed_time() / 1000 / 1000;
+                    continue;
+                }
             }
+
 
             //filter invalid prefix of json
             std::string filter_data = substring_prefix_json(msg->getDataAsString());
@@ -399,6 +408,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
         left_time = ctx->max_interval_s * 1000 - watch.elapsed_time() / 1000 / 1000;
     }
+
+    exist_repeated_ack.clear();
 
     return Status::OK();
 }
