@@ -197,7 +197,7 @@ public:
     // acknowledge pulsar message
     Status acknowledge_cumulative(pulsar::MessageId& message_id);
 
-    Status acknowledge(pulsar::MessageId& message_id);
+    Status acknowledge(pulsar::MessageId& message_id, std::string partition);
 
     // start the consumer and put msgs to queue
     Status group_consume(BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms);
@@ -220,6 +220,7 @@ private:
     std::string _topic;
     std::string _subscription;
     std::unordered_map<std::string, std::string> _custom_properties;
+    std::string _topic_name;
 
     pulsar::Client* _p_client = nullptr;
     pulsar::Consumer _p_consumer;

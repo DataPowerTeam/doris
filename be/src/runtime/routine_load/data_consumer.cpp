@@ -553,11 +553,13 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
             msg_id = msg.get()->getMessageId();
             message_str = msg.get()->getDataAsString();
             if (received_rows == 0) {
+                _topic_name = msg.get()->getTopicName();
                 LOG(INFO) << "receive first pulsar message: "
                           << ", len: " << message_str.size()
                           << ", message id: " << msg_id
                           << ", pulsar consumer: " << _id
-                          << ", grp: " << _grp_id;
+                          << ", grp: " << _grp_id
+                          << ", topic name: " << _topic_name;
             }
             if (!queue->blocking_put(msg.get())) {
                 // queue is shutdown
@@ -677,7 +679,11 @@ Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id)
     return Status::OK();
 }
 
-Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id) {
+Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id, std::string partition) {
+    //避免重复ack
+    if (_topic_name.empty() || _topic_name.compare(partition) != 0) {
+        return Status::OK();
+    }
     pulsar::Result res = _p_consumer.acknowledge(message_id);
     if (res != pulsar::ResultOk) {
         std::stringstream ss;
