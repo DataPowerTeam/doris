@@ -279,6 +279,9 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
     // copy one
     std::map<std::string, pulsar::MessageId> ack_offset = ctx->pulsar_info->ack_offset;
+    for (auto& kv : ack_offset) {
+        LOG(INFO) << "init ack_offset. key: " << kv.first << ", value: " << kv.second;
+    }
 
     //improve performance
     Status (io::PulsarConsumerPipe::*append_data)(const char* data, size_t size);
