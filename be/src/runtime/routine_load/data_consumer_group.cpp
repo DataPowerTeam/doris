@@ -343,7 +343,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
             std::size_t len = msg->getLength();
 
             // avoid repeated ack
-            if (received_rows == 0 && ack_offset.find(partition) != ack_offset.end()
+            if (ack_offset.find(partition) != ack_offset.end()
                     && ack_offset[partition] >= msg_id) {
                 LOG(INFO) << "Pass repeated message id: " << msg_id;
                 acknowledge(msg_id, partition);
@@ -375,7 +375,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                left_bytes -= len;
                ack_offset[partition] = msg_id;
                acknowledge(msg_id, partition);
-               LOG(INFO) << "load message id: " << msg_id;
+               VLOG(3) << "load message id: " << msg_id;
            } else {
                // failed to append this msg, we must stop
                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg=" << st.to_string();
