@@ -501,10 +501,6 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        for (auto& kv : _last_ack_offset) {
-            delete kv.second;
-            kv.second = nullptr;
-        }
         _last_ack_offset.clear();
         _last_ack_offset = ctx->pulsar_info->ack_offset;
         for (auto& kv : _last_ack_offset) {
