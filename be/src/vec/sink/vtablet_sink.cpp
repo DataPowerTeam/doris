@@ -1225,7 +1225,7 @@ Status VOlapTableSink::find_tablet(RuntimeState* state, vectorized::Block* block
 void VOlapTableSink::_generate_row_distribution_payload(
         ChannelDistributionPayload& channel_to_payload, const VOlapTablePartition* partition,
         uint32_t tablet_index, int row_idx, size_t row_cnt) {
-    // Generate channel payload for sinking data to differenct node channel
+    // Generate channel payload for sinking data to differenct node channel // ChannelDistributionPayload = std::vector<std::unordered_map<VNodeChannel*, Payload>> // Payload = std::pair<std::unique_ptr<vectorized::IColumn::Selector>, std::vector<int64_t>>;
     for (int j = 0; j < partition->indexes.size(); ++j) {
         auto tid = partition->indexes[j].tablets[tablet_index];
         auto it = _channels[j]->_channels_by_tablet.find(tid);

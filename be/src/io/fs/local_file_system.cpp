@@ -38,6 +38,8 @@
 #include "io/fs/file_writer.h"
 #include "io/fs/local_file_reader.h"
 #include "io/fs/local_file_writer.h"
+#include "io/fs/cached_local_file_writer.h"
+#include "io/fs/cached_local_file_writer2.h"
 #include "runtime/thread_context.h"
 #include "util/async_io.h" // IWYU pragma: keep
 #include "util/defer_op.h"
@@ -60,7 +62,9 @@ Status LocalFileSystem::create_file_impl(const Path& file, FileWriterPtr* writer
     if (-1 == fd) {
         return Status::IOError("failed to open {}: {}", file.native(), errno_to_str());
     }
-    *writer = std::make_unique<LocalFileWriter>(
+    // *writer = std::make_unique<LocalFileWriter>(
+    // *writer = std::make_unique<CachedLocalFileWriter>(
+    *writer = std::make_unique<CachedLocalFileWriter2>(
             std::move(file), fd, std::static_pointer_cast<LocalFileSystem>(shared_from_this()));
     return Status::OK();
 }
