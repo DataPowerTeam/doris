@@ -36,9 +36,9 @@
 #include "common/compiler_util.h" // IWYU pragma: keep
 #include "common/status.h"
 #include "gutil/macros.h"
+#include "io/fs/cached_local_file_writer.h"
 #include "io/fs/file_writer.h"
 #include "io/fs/local_file_system.h"
-#include "io/fs/cached_local_file_writer.h"
 #include "io/fs/path.h"
 #include "util/doris_metrics.h"
 
@@ -117,19 +117,19 @@ Status CachedLocalFileWriter::_flush_all() {
         for (size_t i = 0; i < snd; i++) {
             const Slice& result = fst[i];
             bytes_req += result.size;
-            iovec iov2 = {result.data, result.size};
-            iov.push_back(iov2);
+            iov.push_back({result.data, result.size});
         }
     }
 
-    if (bytes_req > 0) {
-        ssize_t res;
-        RETRY_ON_EINTR(res, ::writev(_fd, iov.data(), iov.size()));
-        if (UNLIKELY(res < 0)) {
-            LOG(INFO) << "can not write to " << _path.native() << ", error no: " << errno << ", error msg: " << strerror(errno);;
-            perror("writev");
-            return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
-        }
+    ssize_t res;
+    RETRY_ON_EINTR(res, ::writev(_fd, iov.data(), iov.size()));
+    if (UNLIKELY(res < 0)) {
+        LOG(INFO) << "can not write to " << _path.native() << ", error no: " << errno
+                  << ", error msg: " << strerror(errno);
+        perror("writev");
+        return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
+    } else {
+        // clear page
         _page.clear();
     }
 
@@ -168,7 +168,6 @@ Status CachedLocalFileWriter::finalize() {
 #endif
     }
     _flush_all();
-    _close(true);
     return Status::OK();
 }
 
