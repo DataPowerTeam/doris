@@ -99,7 +99,11 @@ Status CachedLocalFileWriter::appendv(const Slice* data, size_t data_cnt) {
     _dirty = true;
 
     _data_cnt += data_cnt;
-    _page.emplace_back(std::pair(data, data_cnt));
+    for (size_t i = 0; i < data_cnt; i++) {
+        const Slice& result = data[i];
+        _bytes_req += result.size;
+        _iov.push_back({result.data, result.size});
+    }
     return Status::OK();
 }
 
@@ -107,22 +111,9 @@ Status CachedLocalFileWriter::_flush_all() {
     DCHECK(!_closed);
     _dirty = true;
 
-    // Convert the results into the iovec vector to request
-    // and calculate the total bytes requested.
-    size_t bytes_req = 0;
-
-    std::vector<iovec> iov;
-
-    for (const auto& [fst, snd] : _page) {
-        for (size_t i = 0; i < snd; i++) {
-            const Slice& result = fst[i];
-            bytes_req += result.size;
-            iov.push_back({result.data, result.size});
-        }
-    }
 
     ssize_t res;
-    RETRY_ON_EINTR(res, ::writev(_fd, iov.data(), iov.size()));
+    RETRY_ON_EINTR(res, ::writev(_fd, _iov.data(), _iov.size()));
     if (UNLIKELY(res < 0)) {
         LOG(INFO) << "can not write to " << _path.native() << ", error no: " << errno
                   << ", error msg: " << strerror(errno);
@@ -130,7 +121,10 @@ Status CachedLocalFileWriter::_flush_all() {
         return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
     }
 
-    _bytes_appended += bytes_req;
+    _iov.clear();
+    _bytes_req = 0;
+
+    _bytes_appended += _bytes_req;
     return Status::OK();
 }
 
