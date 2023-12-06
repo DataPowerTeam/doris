@@ -50,7 +50,7 @@ private:
 
     Status _flush_all();
 
-    iovec _merge_slices(const Slice* slices, size_t count);
+    static iovec _merge_slices(const Slice* slices, size_t count);
 };
 
 } // namespace io
