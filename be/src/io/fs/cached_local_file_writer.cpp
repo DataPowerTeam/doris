@@ -101,6 +101,9 @@ Status CachedLocalFileWriter::appendv(const Slice* data, size_t data_cnt) {
     _data_cnt += data_cnt;
     for (size_t i = 0; i < data_cnt; i++) {
         const Slice& result = data[i];
+        if (result.size == 0) {
+            continue;
+        }
         _bytes_req += result.size;
         const std::unique_ptr<char[]> merged_data(new char[result.size]);
         std::memcpy(merged_data.get(),result.data, result.size);

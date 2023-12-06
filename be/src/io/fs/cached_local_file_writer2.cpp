@@ -106,7 +106,6 @@ Status CachedLocalFileWriter2::appendv(const Slice* data, size_t data_cnt) {
         const Slice& result = data[i];
         bytes_req += result.size;
         iov.push_back({result.data, result.size});
-        LOG(INFO) << "appendv: " << _path.native() << ", data is null: " << (result.data == nullptr) << ", size: " << result.size;
     }
 
     // Use a single writev call for the entire buffer
