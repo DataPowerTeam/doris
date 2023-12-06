@@ -102,7 +102,9 @@ Status CachedLocalFileWriter::appendv(const Slice* data, size_t data_cnt) {
     for (size_t i = 0; i < data_cnt; i++) {
         const Slice& result = data[i];
         _bytes_req += result.size;
-        _iov.push_back({result.data, result.size});
+        const std::unique_ptr<char[]> merged_data(new char[result.size]);
+        std::memcpy(merged_data.get(),result.data, result.size);
+        _iov.push_back({merged_data.get(), result.size});
         LOG(INFO) << "appendv: " << _path.native() << ", data is null: " << (result.data == nullptr) << ", size: " << result.size;
     }
     return Status::OK();
