@@ -137,7 +137,7 @@ Status CachedLocalFileWriter::_flush_all() {
     return Status::OK();
 }
 
-iovec _merge_slices(const Slice* slices, size_t count) {
+iovec CachedLocalFileWriter::_merge_slices(const Slice* slices, size_t count) {
     size_t total_size = 0;
     for (size_t i = 0; i < count; i++) {
         total_size += slices[i].size;
