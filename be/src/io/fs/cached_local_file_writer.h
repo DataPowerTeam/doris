@@ -49,8 +49,6 @@ private:
     std::list<std::pair<const Slice*, size_t>> _page;
 
     Status _flush_all();
-
-    static iovec _merge_slices(const Slice* slices, size_t count);
 };
 
 } // namespace io

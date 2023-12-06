@@ -117,11 +117,8 @@ Status CachedLocalFileWriter::_flush_all() {
         for (size_t i = 0; i < snd; i++) {
             const Slice& result = fst[i];
             bytes_req += result.size;
+            iov.push_back({result.data, result.size});
         }
-
-        // Merge slices into a single iovec entry
-        iovec merged_iov = _merge_slices(fst, snd);
-        iov.push_back(merged_iov);
     }
 
     ssize_t res;
@@ -135,30 +132,6 @@ Status CachedLocalFileWriter::_flush_all() {
 
     _bytes_appended += bytes_req;
     return Status::OK();
-}
-
-iovec CachedLocalFileWriter::_merge_slices(const Slice* slices, size_t count) {
-    size_t total_size = 0;
-    for (size_t i = 0; i < count; i++) {
-        total_size += slices[i].size;
-    }
-
-    const std::unique_ptr<char[]> merged_data(new char[total_size]);
-
-    size_t offset = 0;
-    try {
-        for (size_t i = 0; i < count; i++) {
-            std::memcpy(merged_data.get() + offset, slices[i].data, slices[i].size);
-            offset += slices[i].size;
-        }
-    } catch (...) {
-        LOG(INFO) << "memcpy error! error no: " << errno
-                 << ", error msg: " << strerror(errno);
-        perror("memcpy");
-        throw;  // Re-throw the exception after handling
-    }
-
-    return {merged_data.get(), total_size};
 }
 
 Status CachedLocalFileWriter::write_at(size_t offset, const Slice& data) {
