@@ -103,6 +103,7 @@ Status CachedLocalFileWriter::appendv(const Slice* data, size_t data_cnt) {
         const Slice& result = data[i];
         _bytes_req += result.size;
         _iov.push_back({result.data, result.size});
+        LOG(INFO) << "appendv: " << _path.native() << ", data is null: " << (result.data == nullptr) << ", size: " << result.size;
     }
     return Status::OK();
 }
@@ -113,6 +114,9 @@ Status CachedLocalFileWriter::_flush_all() {
 
 
     ssize_t res;
+    for (iovec it : _iov) {
+        LOG(INFO) << "flush all: " << _path.native() << ", data is null: " << (it.iov_base == nullptr) << ", size: " << it.iov_len;
+    }
     RETRY_ON_EINTR(res, ::writev(_fd, _iov.data(), _iov.size()));
     if (UNLIKELY(res < 0)) {
         LOG(INFO) << "can not write to " << _path.native() << ", error no: " << errno
