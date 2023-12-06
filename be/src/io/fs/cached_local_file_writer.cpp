@@ -146,9 +146,16 @@ iovec CachedLocalFileWriter::_merge_slices(const Slice* slices, size_t count) {
     const std::unique_ptr<char[]> merged_data(new char[total_size]);
 
     size_t offset = 0;
-    for (size_t i = 0; i < count; i++) {
-        std::memcpy(merged_data.get() + offset, slices[i].data, slices[i].size);
-        offset += slices[i].size;
+    try {
+        for (size_t i = 0; i < count; i++) {
+            std::memcpy(merged_data.get() + offset, slices[i].data, slices[i].size);
+            offset += slices[i].size;
+        }
+    } catch (...) {
+        LOG(INFO) << "memcpy error! error no: " << errno
+                 << ", error msg: " << strerror(errno);
+        perror("memcpy");
+        throw;  // Re-throw the exception after handling
     }
 
     return {merged_data.get(), total_size};
