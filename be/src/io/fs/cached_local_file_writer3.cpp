@@ -118,6 +118,7 @@ Status CachedLocalFileWriter3::appendv(const Slice* data, size_t data_cnt) {
         iovec iov = {&merged_data[offset], size_to_write};
         RETRY_ON_EINTR(res, ::writev(_fd, &iov, 1));
         if (UNLIKELY(res < 0)) {
+            LOG(WARNING) << "can not write to " << _path.native() << ", error no: " << errno << ", error msg: " << strerror(errno);;
             return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
         }
         offset += size_to_write;
