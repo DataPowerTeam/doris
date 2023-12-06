@@ -46,8 +46,7 @@ private:
     int _fd; // owned
     bool _dirty = false;
     size_t _data_cnt = 0;
-    size_t _bytes_req = 0;
-    std::vector<iovec> _iov;
+    std::list<std::pair<const Slice*, size_t>> _page;
 
     Status _flush_all();
 };
