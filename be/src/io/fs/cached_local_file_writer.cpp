@@ -111,24 +111,32 @@ Status CachedLocalFileWriter::_flush_all() {
     // and calculate the total bytes requested.
     size_t bytes_req = 0;
 
-    std::vector<iovec> iov;
-
+    std::vector<char> merged_data;
     for (const auto& [fst, snd] : _page) {
         for (size_t i = 0; i < snd; i++) {
             const Slice& result = fst[i];
             bytes_req += result.size;
-            iov.push_back({result.data, result.size});
+            merged_data.insert(merged_data.end(), result.data, result.data + result.size);
         }
+    }
+
+    // Write merged_data in chunks of IOV_MAX
+    size_t offset = 0;
+    std::vector<iovec> iov;
+    while (offset < merged_data.size()) {
+        const size_t size_to_write = std::min(static_cast<size_t>(IOV_MAX), merged_data.size() - offset);
+        iov.push_back({&merged_data[offset], size_to_write});
+        offset += size_to_write;
     }
 
     ssize_t res;
     RETRY_ON_EINTR(res, ::writev(_fd, iov.data(), iov.size()));
     if (UNLIKELY(res < 0)) {
-        LOG(INFO) << "can not write to " << _path.native() << ", error no: " << errno
+        LOG(ERROR) << "can not write to " << _path.native() << ", error no: " << errno
                   << ", error msg: " << strerror(errno);
-        perror("writev");
         return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
     }
+
     _page.clear();
     _bytes_appended += bytes_req;
     return Status::OK();
