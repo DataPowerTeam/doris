@@ -43,13 +43,14 @@ public:
 private:
     Status _close(bool sync);
 
-private:
     int _fd; // owned
     bool _dirty = false;
     size_t _data_cnt = 0;
     std::list<std::pair<const Slice*, size_t>> _page;
 
     Status _flush_all();
+
+    iovec _merge_slices(const Slice* slices, size_t count);
 };
 
 } // namespace io
