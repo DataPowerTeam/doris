@@ -110,19 +110,29 @@ Status CachedLocalFileWriter3::appendv(const Slice* data, size_t data_cnt) {
         merged_data.insert(merged_data.end(), result.data, result.data + result.size);
     }
 
-    // Write merged_data in chunks of IOV_MAX
-    size_t offset = 0;
-    while (offset < merged_data.size()) {
-        const size_t size_to_write = std::min(static_cast<size_t>(IOV_MAX), merged_data.size() - offset);
-        ssize_t res;
-        iovec iov = {&merged_data[offset], size_to_write};
-        RETRY_ON_EINTR(res, ::writev(_fd, &iov, 1));
-        if (UNLIKELY(res < 0)) {
-            LOG(WARNING) << "can not write to " << _path.native() << ", error no: " << errno << ", error msg: " << strerror(errno);;
-            return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
-        }
-        offset += size_to_write;
+    ssize_t res;
+    RETRY_ON_EINTR(res, write(_fd, &merged_data, bytes_req));
+    if (UNLIKELY(res < 0)) {
+        LOG(WARNING) << "can not write to " << _path.native() << ", error no: " << errno
+                     << ", error msg: " << strerror(errno);
+        return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
     }
+
+    // // Write merged_data in chunks of IOV_MAX
+    // size_t offset = 0;
+    // while (offset < merged_data.size()) {
+    //     const size_t size_to_write =
+    //             std::min(static_cast<size_t>(IOV_MAX), merged_data.size() - offset);
+    //     ssize_t res;
+    //     iovec iov = {&merged_data[offset], size_to_write};
+    //     RETRY_ON_EINTR(res, ::writev(_fd, &iov, 1));
+    //     if (UNLIKELY(res < 0)) {
+    //         LOG(WARNING) << "can not write to " << _path.native() << ", error no: " << errno
+    //                      << ", error msg: " << strerror(errno);
+    //         return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
+    //     }
+    //     offset += size_to_write;
+    // }
 
     _bytes_appended += bytes_req;
     return Status::OK();
