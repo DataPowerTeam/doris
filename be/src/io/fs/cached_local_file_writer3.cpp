@@ -124,37 +124,6 @@ Status CachedLocalFileWriter3::appendv(const Slice* data, size_t data_cnt) {
         offset += size_to_write;
     }
 
-    // std::vector<iovec> iovs;
-    // while (offset < merged_data.size()) {
-    //     const size_t size_to_write =
-    //             std::min(static_cast<size_t>(IOV_MAX), merged_data.size() - offset);
-    //
-    //     iovec iov = {&merged_data[offset], size_to_write};
-    //     iovs.push_back(iov);
-    //     if (iovs.size() > IOV_MAX) {
-    //         ssize_t res;
-    //         RETRY_ON_EINTR(res, ::writev(_fd, iovs.data(), iovs.size()));
-    //         if (UNLIKELY(res < 0)) {
-    //             LOG(WARNING) << "can not write to " << _path.native() << ", error no: " << errno
-    //                          << ", error msg: " << strerror(errno);
-    //             return Status::IOError("cannot write to {}: {}", _path.native(),
-    //                                    std::strerror(errno));
-    //         }
-    //         iovs.clear();
-    //     }
-    //     offset += size_to_write;
-    // }
-    //
-    // if (iovs.size() > 0) {
-    //     ssize_t res;
-    //     RETRY_ON_EINTR(res, ::writev(_fd, iovs.data(), iovs.size()));
-    //     if (UNLIKELY(res < 0)) {
-    //         LOG(WARNING) << "can not write to " << _path.native() << ", error no: " << errno
-    //                      << ", error msg: " << strerror(errno);
-    //         return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
-    //     }
-    // }
-
     _bytes_appended += bytes_req;
     return Status::OK();
 }
