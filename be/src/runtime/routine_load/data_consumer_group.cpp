@@ -503,7 +503,6 @@ std::vector<const char*> PulsarDataConsumerGroup::convert_rows(const char* data)
                     }
                 }
 
-                buffer.Clear();
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 destination.Accept(writer);
 
@@ -513,13 +512,14 @@ std::vector<const char*> PulsarDataConsumerGroup::convert_rows(const char* data)
                 dest_string[buffer_size] = '\0';
                 targets.push_back(dest_string);
 
-                destination.RemoveAllMembers();
+                buffer.Clear();
+                destination.Clear();
             }
         } else {
             targets.push_back(data);
         }
     } else {
-        targets.push_back(data);
+        LOG(WARNING) << "Failed to convert rows, pass json: " << data;
     }
     destination.Clear();
     rapidjson::Document().Swap(destination);
