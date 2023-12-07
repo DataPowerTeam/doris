@@ -664,18 +664,19 @@ Status PulsarDataConsumer::reset() {
 }
 
 Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id) {
+    //避免重复ack
+    if (_topic_name.empty() || _topic_name.compare(partition) != 0) {
+        return Status::OK();
+    }
     pulsar::Result res = _p_consumer.acknowledgeCumulative(message_id);
     if (res != pulsar::ResultOk) {
         std::stringstream ss;
-        ss << "failed to acknowledge pulsar message : " << res;
-        LOG(WARNING) << "failed to acknowledge pulsar message : " << res
+        ss << "failed to acknowledge cumulative pulsar message : " << res;
+        LOG(WARNING) << "failed to acknowledge cumulative pulsar message : " << res
                      << ",pulsar consumer :" << _id
                      << ",pulsar group :" << _grp_id;
         return Status::InternalError(ss.str());
     }
-    LOG(INFO) << "acknowledge cumulative message_id :" << message_id
-              << ",pulsar consumer :" << _id
-              << ",pulsar group :" << _grp_id;
     return Status::OK();
 }
 

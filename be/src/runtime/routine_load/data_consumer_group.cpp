@@ -334,7 +334,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 ctx->pulsar_info->ack_offset = std::move(ack_offset);
                 ctx->receive_bytes = ctx->max_batch_size - left_bytes;
                 get_backlog_nums(ctx);
-//                acknowledge_cumulative(ctx);
+                acknowledge_cumulative(ctx);
                 return Status::OK();
             }
         }
@@ -381,8 +381,11 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                received_rows++;
                // len of receive origin message from pulsar
                left_bytes -= len;
+               if (ack_offset[partition] >= msg_id) {
+                  LOG(WARNING) << "find repeated message id: " << msg_id;
+               }
                ack_offset[partition] = msg_id;
-               acknowledge(msg_id, partition);
+//               acknowledge(msg_id, partition);
                VLOG(3) << "load message id: " << msg_id;
            } else {
                // failed to append this msg, we must stop
@@ -437,14 +440,10 @@ void PulsarDataConsumerGroup::get_backlog_nums(std::shared_ptr<StreamLoadContext
 
 void PulsarDataConsumerGroup::acknowledge_cumulative(std::shared_ptr<StreamLoadContext> ctx) {
     for (auto& kv : ctx->pulsar_info->ack_offset) {
-        LOG(INFO) << "start do ack of message_id: " << kv.second
-                  << "partition: " << kv.first;
         for (auto& consumer : _consumers) {
             // do ack
             Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second);
         }
-        LOG(INFO) << "finish do ack of message_id: " << kv.second
-                  << "partition: " << kv.first;
     }
 }
 
