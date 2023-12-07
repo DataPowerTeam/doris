@@ -195,7 +195,7 @@ public:
     Status reset() override;
     bool match(std::shared_ptr<StreamLoadContext> ctx) override;
     // acknowledge pulsar message
-    Status acknowledge_cumulative(pulsar::MessageId& message_id);
+    Status acknowledge_cumulative(pulsar::MessageId& message_id, std::string partition);
 
     Status acknowledge(pulsar::MessageId& message_id, std::string partition);
 

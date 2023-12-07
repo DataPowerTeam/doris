@@ -663,7 +663,7 @@ Status PulsarDataConsumer::reset() {
     return Status::OK();
 }
 
-Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id) {
+Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id, std::string partition) {
     //避免重复ack
     if (_topic_name.empty() || _topic_name.compare(partition) != 0) {
         return Status::OK();
