@@ -105,7 +105,7 @@ Status LocalFileWriter::appendv(const Slice* data, size_t data_cnt) {
     for (size_t i = 0; i < data_cnt; i++) {
         const Slice& result = data[i];
         bytes_req += result.size;
-        LOG(INFO) << "appendv, fd: " << _path.native() << ", size: " << result.size;
+        LOG(INFO) << "appendv, fd: " << _path.native() << ", size: " << result.size << ", is small" << (result.size < IOV_MAX);
         iov[i] = {result.data, result.size};
     }
     LOG(INFO) << "appendv end, fd: " << _path.native();
