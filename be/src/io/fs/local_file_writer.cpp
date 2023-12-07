@@ -101,12 +101,14 @@ Status LocalFileWriter::appendv(const Slice* data, size_t data_cnt) {
     // and calculate the total bytes requested.
     size_t bytes_req = 0;
     struct iovec iov[data_cnt];
+    LOG(INFO) << "appendv begin, fd: " << _path.native();
     for (size_t i = 0; i < data_cnt; i++) {
         const Slice& result = data[i];
         bytes_req += result.size;
         LOG(INFO) << "appendv, fd: " << _path.native() << ", size: " << result.size;
         iov[i] = {result.data, result.size};
     }
+    LOG(INFO) << "appendv end, fd: " << _path.native();
 
     size_t completed_iov = 0;
     size_t n_left = bytes_req;
