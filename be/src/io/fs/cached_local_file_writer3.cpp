@@ -101,7 +101,6 @@ Status CachedLocalFileWriter3::appendv(const Slice* data, size_t data_cnt) {
     // Convert the results into the iovec vector to request
     // and calculate the total bytes requested.
     size_t bytes_req = 0;
-    size_t call_cnt = 0;
 
     // 合并调用字节
     std::vector<char> merged_data;
@@ -121,7 +120,7 @@ Status CachedLocalFileWriter3::appendv(const Slice* data, size_t data_cnt) {
         ssize_t res;
         iovec iov = {&merged_data[offset], size_to_write};
         RETRY_ON_EINTR(res, ::writev(_fd, &iov, 1));
-        call_cnt++;
+        _sys_call++;
         if (UNLIKELY(res < 0)) {
             LOG(WARNING) << "can not write to " << _path.native() << ", error no: " << errno << ", error msg: " << strerror(errno);;
             return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
@@ -129,7 +128,6 @@ Status CachedLocalFileWriter3::appendv(const Slice* data, size_t data_cnt) {
         offset += size_to_write;
     }
 
-    LOG(INFO) << "writed end, fd: " << _path.native() << ", call cnt: " << call_cnt;
 
     _bytes_appended += bytes_req;
     return Status::OK();
@@ -165,6 +163,7 @@ Status CachedLocalFileWriter3::finalize() {
         }
 #endif
     }
+    LOG(INFO) << "writed end, fd: " << _path.native() << ", call cnt: " << _sys_call;
     return Status::OK();
 }
 
