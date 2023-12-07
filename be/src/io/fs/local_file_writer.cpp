@@ -101,14 +101,11 @@ Status LocalFileWriter::appendv(const Slice* data, size_t data_cnt) {
     // and calculate the total bytes requested.
     size_t bytes_req = 0;
     struct iovec iov[data_cnt];
-    LOG(INFO) << "appendv begin, fd: " << _path.native();
     for (size_t i = 0; i < data_cnt; i++) {
         const Slice& result = data[i];
         bytes_req += result.size;
-        LOG(INFO) << "appendv, fd: " << _path.native() << ", size: " << result.size << ", is small" << (result.size < IOV_MAX);
         iov[i] = {result.data, result.size};
     }
-    LOG(INFO) << "appendv end, fd: " << _path.native();
 
     size_t completed_iov = 0;
     size_t n_left = bytes_req;
@@ -117,7 +114,6 @@ Status LocalFileWriter::appendv(const Slice* data, size_t data_cnt) {
         size_t iov_count = std::min(data_cnt - completed_iov, static_cast<size_t>(IOV_MAX));
         ssize_t res;
         RETRY_ON_EINTR(res, ::writev(_fd, iov + completed_iov, iov_count));
-        _sys_call++;
         if (UNLIKELY(res < 0)) {
             return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
         }
@@ -179,7 +175,6 @@ Status LocalFileWriter::finalize() {
         }
 #endif
     }
-    LOG(INFO) << "writed end, fd: " << _path.native() << ", call cnt: " << _sys_call;
     return Status::OK();
 }
 

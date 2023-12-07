@@ -46,7 +46,6 @@ private:
 private:
     int _fd; // owned
     bool _dirty = false;
-    size_t _sys_call = 0;
 };
 
 } // namespace io

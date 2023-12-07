@@ -104,14 +104,11 @@ Status CachedLocalFileWriter3::appendv(const Slice* data, size_t data_cnt) {
 
     // 合并调用字节
     std::vector<char> merged_data;
-    LOG(INFO) << "appendv begin, fd: " << _path.native();
     for (size_t i = 0; i < data_cnt; i++) {
         const Slice& result = data[i];
-        LOG(INFO) << "appendv, fd: " << _path.native() << ", size: " << result.size << ", is small" << (result.size < IOV_MAX);
         bytes_req += result.size;
         merged_data.insert(merged_data.end(), result.data, result.data + result.size);
     }
-    LOG(INFO) << "appendv end, fd: " << _path.native();
 
     // Write merged_data in chunks of IOV_MAX
     size_t offset = 0;
@@ -120,7 +117,6 @@ Status CachedLocalFileWriter3::appendv(const Slice* data, size_t data_cnt) {
         ssize_t res;
         iovec iov = {&merged_data[offset], size_to_write};
         RETRY_ON_EINTR(res, ::writev(_fd, &iov, 1));
-        _sys_call++;
         if (UNLIKELY(res < 0)) {
             LOG(WARNING) << "can not write to " << _path.native() << ", error no: " << errno << ", error msg: " << strerror(errno);;
             return Status::IOError("cannot write to {}: {}", _path.native(), std::strerror(errno));
@@ -163,7 +159,6 @@ Status CachedLocalFileWriter3::finalize() {
         }
 #endif
     }
-    LOG(INFO) << "writed end, fd: " << _path.native() << ", call cnt: " << _sys_call;
     return Status::OK();
 }
 
