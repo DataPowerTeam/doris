@@ -140,6 +140,7 @@ public:
     IntGauge* compaction_used_permits;
     // permits required by the compaction task which is waiting for permits
     IntGauge* compaction_waitting_permits;
+    IntGauge* cumulative_compaction_duration_us;
 
     HistogramMetric* tablet_version_num_distribution;
 

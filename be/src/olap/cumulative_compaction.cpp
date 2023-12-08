@@ -81,6 +81,8 @@ Status CumulativeCompaction::execute_compact_impl() {
     }
 
     SCOPED_ATTACH_TASK(_mem_tracker);
+    int64_t duration_ns = 0;
+    SCOPED_RAW_TIMER(&duration_ns);
 
     // 3. do cumulative compaction, merge rowsets
     int64_t permits = get_compaction_permits();
@@ -98,6 +100,7 @@ Status CumulativeCompaction::execute_compact_impl() {
     // 6. add metric to cumulative compaction
     DorisMetrics::instance()->cumulative_compaction_deltas_total->increment(_input_rowsets.size());
     DorisMetrics::instance()->cumulative_compaction_bytes_total->increment(_input_rowsets_size);
+    DorisMetrics::instance()->cumulative_compaction_duration_us->increment(duration_ns / 1000);
 
     return Status::OK();
 }

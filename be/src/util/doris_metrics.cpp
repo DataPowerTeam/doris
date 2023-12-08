@@ -149,6 +149,7 @@ DEFINE_GAUGE_METRIC_PROTOTYPE_2ARG(all_segments_num, MetricUnit::NOUNIT);
 
 DEFINE_GAUGE_METRIC_PROTOTYPE_2ARG(compaction_used_permits, MetricUnit::NOUNIT);
 DEFINE_GAUGE_METRIC_PROTOTYPE_2ARG(compaction_waitting_permits, MetricUnit::NOUNIT);
+DEFINE_GAUGE_METRIC_PROTOTYPE_2ARG(cumulative_compaction_duration_us, MetricUnit::MICROSECONDS);
 
 DEFINE_HISTOGRAM_METRIC_PROTOTYPE_2ARG(tablet_version_num_distribution, MetricUnit::NOUNIT);
 
@@ -285,6 +286,7 @@ DorisMetrics::DorisMetrics() : _metric_registry(_s_registry_name) {
 
     INT_GAUGE_METRIC_REGISTER(_server_metric_entity, compaction_used_permits);
     INT_GAUGE_METRIC_REGISTER(_server_metric_entity, compaction_waitting_permits);
+    INT_GAUGE_METRIC_REGISTER(_server_metric_entity, cumulative_compaction_duration_us);
 
     HISTOGRAM_METRIC_REGISTER(_server_metric_entity, tablet_version_num_distribution);
 
