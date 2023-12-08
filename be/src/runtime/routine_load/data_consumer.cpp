@@ -677,6 +677,9 @@ Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id,
                      << ",pulsar group :" << _grp_id;
         return Status::InternalError(ss.str());
     }
+    LOG(INFO) << "Succeed to acknowledge cumulative pulsar message : " << res
+              << ",pulsar consumer :" << _id
+              << ",pulsar group :" << _grp_id;
     return Status::OK();
 }
 
