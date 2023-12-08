@@ -443,7 +443,7 @@ Status PulsarDataConsumerGroup::acknowledge_cumulative(std::shared_ptr<StreamLoa
     for (auto& kv : ctx->pulsar_info->ack_offset) {
         for (auto& consumer : _consumers) {
             // do cumulative ack
-            st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second, kv.first);
+            Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second, kv.first);
             if (!st.ok()) {
                 result_st = st;
             }
