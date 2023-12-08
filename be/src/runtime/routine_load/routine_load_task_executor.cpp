@@ -461,7 +461,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
 
     // return the consumer back to pool
     // call this before commit txn, in case the next task can come very fast
-    consumer_pool->return_consumers(consumer_grp.get());
+//    consumer_pool->return_consumers(consumer_grp.get());
 
     // commit txn
     HANDLE_ERROR(_exec_env->stream_load_executor()->commit_txn(ctx.get()), "commit failed");
@@ -516,6 +516,9 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     default:
         break;
     }
+    // return the consumer back to pool
+    // call this before commit txn, in case the next task can come very fast
+    consumer_pool->return_consumers(consumer_grp.get());
     cb(ctx);
 }
 
