@@ -438,13 +438,18 @@ void PulsarDataConsumerGroup::get_backlog_nums(std::shared_ptr<StreamLoadContext
     }
 }
 
-void PulsarDataConsumerGroup::acknowledge_cumulative(std::shared_ptr<StreamLoadContext> ctx) {
+Status PulsarDataConsumerGroup::acknowledge_cumulative(std::shared_ptr<StreamLoadContext> ctx) {
+    Status result_st = Status::OK();
     for (auto& kv : ctx->pulsar_info->ack_offset) {
         for (auto& consumer : _consumers) {
             // do cumulative ack
-            Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second, kv.first);
+            st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second, kv.first);
+            if (!st.ok()) {
+                result_st = st;
+            }
         }
     }
+    return result_st;
 }
 
 void PulsarDataConsumerGroup::acknowledge(pulsar::MessageId& message_id, std::string partition) {

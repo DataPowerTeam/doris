@@ -117,6 +117,9 @@ public:
     // assign topic partitions to all consumers equally
     Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
 
+    // acknowledge pulsar message
+    Status acknowledge_cumulative(std::shared_ptr<StreamLoadContext> ctx);
+
 private:
     // start a single consumer
     void actual_consume(const std::shared_ptr<DataConsumer>& consumer, BlockingQueue<pulsar::Message*>* queue,
@@ -129,9 +132,6 @@ private:
     size_t len_of_actual_data(const char* data);
 
     std::vector<const char*> convert_rows(const char* data);
-
-    // acknowledge pulsar message
-    void acknowledge_cumulative(std::shared_ptr<StreamLoadContext> ctx);
 
     // acknowledge pulsar message
     void acknowledge(pulsar::MessageId& message_id, std::string partition);

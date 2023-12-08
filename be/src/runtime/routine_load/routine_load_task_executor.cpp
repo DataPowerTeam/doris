@@ -501,13 +501,15 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        //do ack
-        std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)->acknowledge_cumulative(ctx);
         _last_ack_offset.clear();
         _last_ack_offset = ctx->pulsar_info->ack_offset;
         for (auto& kv : _last_ack_offset) {
-            // do ack
             LOG(INFO) << "_last_ack_offset should be ack  :" << kv.second << ", partition: " << kv.first;
+        }
+        //do ack
+        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)->acknowledge_cumulative(ctx);
+        if (!st.ok()) {
+            LOG(WARNING) << st;
         }
         break;
     }
