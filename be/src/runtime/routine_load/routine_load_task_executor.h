@@ -29,6 +29,7 @@
 #include "runtime/routine_load/data_consumer_pool.h"
 #include "util/uid_util.h"
 #include "util/work_thread_pool.hpp"
+#include "pulsar/Client.h"
 
 namespace doris {
 
