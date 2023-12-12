@@ -452,4 +452,344 @@ bool KafkaDataConsumer::match(std::shared_ptr<StreamLoadContext> ctx) {
     return true;
 }
 
+// init pulsar consumer will only set common configs
+Status PulsarDataConsumer::init(std::shared_ptr<StreamLoadContext> ctx) {
+    std::unique_lock<std::mutex> l(_lock);
+    if (_init) {
+        // this consumer has already been initialized.
+        return Status::OK();
+    }
+
+    pulsar::ClientConfiguration config;
+    for (auto& item : ctx->pulsar_info->properties) {
+        if (item.first == "auth.token") {
+            config.setAuth(pulsar::AuthToken::createWithToken(item.second));
+        } else {
+            LOG(WARNING) << "Config " << item.first << " not supported for now.";
+        }
+
+        _custom_properties.emplace(item.first, item.second);
+    }
+
+    _p_client = new pulsar::Client(_service_url, config);
+
+    VLOG(3) << "finished to init pulsar consumer. " << ctx->brief();
+
+    _init = true;
+    return Status::OK();
+}
+
+Status PulsarDataConsumer::assign_partition(const std::string& partition, std::shared_ptr<StreamLoadContext> ctx,
+                                            int64_t initial_position) {
+    DCHECK(_p_client);
+
+    std::stringstream ss;
+    ss << "consumer: " << _id << ", grp: " << _grp_id << " topic: " << _topic
+       << ", subscription: " << _subscription << ", initial_position: " << initial_position;
+    LOG(INFO) << ss.str();
+
+    // do subscribe
+    pulsar::ConsumerConfiguration conf;
+    conf.setConsumerType(pulsar::ConsumerExclusive);
+    conf.setAckGroupingTimeMs(0); // 设置累积确认立即同步
+    conf.setAckGroupingMaxSize(0);
+
+    pulsar::Result result;
+    result = _p_client->subscribe(partition, _subscription, conf, _p_consumer);
+    if (result != pulsar::ResultOk) {
+        LOG(WARNING) << "PAUSE: failed to create pulsar consumer: " << ctx->brief(true) << ", err: " << result;
+        return Status::InternalError("PAUSE: failed to create pulsar consumer: " +
+                                     std::string(pulsar::strResult(result)));
+    }
+
+    if (initial_position == InitialPosition::LATEST || initial_position == InitialPosition::EARLIEST) {
+        pulsar::InitialPosition p_initial_position = initial_position == InitialPosition::LATEST
+                                                             ? pulsar::InitialPosition::InitialPositionLatest
+                                                             : pulsar::InitialPosition::InitialPositionEarliest;
+        result = _p_consumer.seek(p_initial_position);
+        if (result != pulsar::ResultOk) {
+            LOG(WARNING) << "PAUSE: failed to reset the subscription: " << ctx->brief(true) << ", err: " << result;
+            return Status::InternalError("PAUSE: failed to reset the subscription: " +
+                                         std::string(pulsar::strResult(result)));
+        }
+    }
+
+    return Status::OK();
+}
+
+Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms) {
+    _last_visit_time = time(nullptr);
+    int64_t left_time = max_running_time_ms;
+    LOG(INFO) << "start pulsar consumer: " << _id << ", grp: " << _grp_id << ", max running time(ms): " << left_time;
+
+    int64_t received_rows = 0;
+    int64_t put_rows = 0;
+    Status st = Status::OK();
+    pulsar::MessageId msg_id;
+    std::string message_str;
+    MonotonicStopWatch consumer_watch;
+    MonotonicStopWatch watch;
+    watch.start();
+    while (true) {
+        {
+            std::unique_lock<std::mutex> l(_lock);
+            if (_cancelled) {
+                break;
+            }
+        }
+
+        if (left_time <= 0) {
+            break;
+        }
+
+        bool done = false;
+        auto msg = std::make_unique<pulsar::Message>();
+        // consume 1 message at a time
+        consumer_watch.start();
+        pulsar::Result res = _p_consumer.receive(*(msg.get()), 30000 /* timeout, ms */);
+        consumer_watch.stop();
+        switch (res) {
+        case pulsar::ResultOk:
+            msg_id = msg.get()->getMessageId();
+            message_str = msg.get()->getDataAsString();
+            if (received_rows == 0) {
+                _topic_name = msg.get()->getTopicName();
+                LOG(INFO) << "receive first pulsar message: "
+                          << ", len: " << message_str.size()
+                          << ", message id: " << msg_id
+                          << ", pulsar consumer: " << _id
+                          << ", grp: " << _grp_id
+                          << ", topic name: " << _topic_name;
+            }
+            if (!queue->blocking_put(msg.get())) {
+                // queue is shutdown
+                LOG(INFO) << "queue is shutdown, failed to blocking put"
+                          << ", len: " << message_str.size()
+                          << ", message id: " << msg_id
+                          << ", pulsar consumer: " << _id
+                          << ", grp: " << _grp_id;
+                done = true;
+            } else {
+                ++put_rows;
+            }
+            ++received_rows;
+            msg.release(); // release the ownership, msg will be deleted after being processed
+            break;
+        case pulsar::ResultTimeout:
+            // leave the status as OK, because this may happened
+            // if there is no data in pulsar.
+            LOG(INFO) << "pulsar consumer"
+                      << "[" << _id << "]"
+                      << " consume timeout.";
+            break;
+        default:
+            LOG(WARNING) << "pulsar consumer"
+                         << "[" << _id << "]"
+                         << " consume failed: "
+                         << ", errmsg: " << res;
+            done = true;
+            st = Status::InternalError(pulsar::strResult(res));
+            break;
+        }
+
+        left_time = max_running_time_ms - watch.elapsed_time() / 1000 / 1000;
+        if (done) {
+            break;
+        }
+    }
+
+//    LOG(INFO) << "start do ack of msg_id :" << msg_id;
+//    pulsar::Result ack = _p_consumer.acknowledgeCumulative(msg_id);
+//    if (ack != pulsar::ResultOk) {
+//        LOG(WARNING) << "failed do ack of msg_id :" << msg_id << ", consumer : " << _id;
+//    } else {
+//        LOG(INFO) << "finish do ack of msg_id :" << msg_id << ", consumer : " << _id;
+//    }
+
+    LOG(INFO) << "pulsar consume done: " << _id << ", grp: " << _grp_id << ". cancelled: " << _cancelled
+              << ", left time(ms): " << left_time << ", total cost(ms): " << watch.elapsed_time() / 1000 / 1000
+              << ", consume cost(ms): " << consumer_watch.elapsed_time() / 1000 / 1000
+              << ", received rows: " << received_rows << ", put rows: " << put_rows
+              << ", last message id: " << msg_id << ",len: " << message_str.size();
+
+    return st;
+}
+
+const std::string& PulsarDataConsumer::get_partition() {
+    _last_visit_time = time(nullptr);
+    return _p_consumer.getTopic();
+}
+
+Status PulsarDataConsumer::get_partition_backlog(int64_t* backlog) {
+    _last_visit_time = time(nullptr);
+    pulsar::BrokerConsumerStats broker_consumer_stats;
+    pulsar::Result result = _p_consumer.getBrokerConsumerStats(broker_consumer_stats);
+    if (result != pulsar::ResultOk) {
+        LOG(WARNING) << "Failed to get broker consumer stats: "
+                     << ", err: " << result;
+        return Status::InternalError("Failed to get broker consumer stats: " + std::string(pulsar::strResult(result)));
+    }
+    *backlog = broker_consumer_stats.getMsgBacklog();
+
+    return Status::OK();
+}
+
+Status PulsarDataConsumer::get_topic_partition(std::vector<std::string>* partitions) {
+    _last_visit_time = time(nullptr);
+    pulsar::Result result = _p_client->getPartitionsForTopic(_topic, *partitions);
+    if (result != pulsar::ResultOk) {
+        LOG(WARNING) << "Failed to get partitions for topic: " << _topic << ", err: " << result;
+        return Status::InternalError("Failed to get partitions for topic: " + std::string(pulsar::strResult(result)));
+    }
+
+    return Status::OK();
+}
+
+Status PulsarDataConsumer::cancel(std::shared_ptr<StreamLoadContext> ctx) {
+    std::unique_lock<std::mutex> l(_lock);
+    if (!_init) {
+        return Status::InternalError("consumer is not initialized");
+    }
+
+    _cancelled = true;
+    LOG(INFO) << "pulsar consumer cancelled. " << _id;
+    return Status::OK();
+}
+
+Status PulsarDataConsumer::reset() {
+    std::unique_lock<std::mutex> l(_lock);
+    _cancelled = false;
+    _p_consumer.close();
+    return Status::OK();
+}
+
+Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id, std::string partition) {
+    //避免重复ack
+    if (_topic_name.empty() || _topic_name.compare(partition) != 0) {
+        return Status::OK();
+    }
+    pulsar::Result res = _p_consumer.acknowledgeCumulative(message_id);
+    if (res != pulsar::ResultOk) {
+        std::stringstream ss;
+        ss << "failed to acknowledge cumulative pulsar message : " << res;
+        LOG(WARNING) << "failed to acknowledge cumulative pulsar message : " << res
+                     << ",pulsar consumer :" << _id
+                     << ",pulsar group :" << _grp_id;
+        return Status::InternalError(ss.str());
+    }
+    LOG(INFO) << "Succeed to acknowledge cumulative pulsar message : " << res
+              << ",pulsar consumer :" << _id
+              << ",pulsar group :" << _grp_id;
+    return Status::OK();
+}
+
+Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id, std::string partition) {
+    //避免重复ack
+    if (_topic_name.empty() || _topic_name.compare(partition) != 0) {
+        return Status::OK();
+    }
+    pulsar::Result res = _p_consumer.acknowledge(message_id);
+    if (res != pulsar::ResultOk) {
+        std::stringstream ss;
+        ss << "failed to acknowledge pulsar message : " << res;
+        LOG(WARNING) << "failed to acknowledge pulsar message : " << res
+                     << ",pulsar consumer :" << _id
+                     << ",pulsar group :" << _grp_id;
+        return Status::InternalError(ss.str());
+    }
+    return Status::OK();
+}
+
+bool PulsarDataConsumer::match(std::shared_ptr<StreamLoadContext> ctx) {
+    if (ctx->load_src_type != TLoadSourceType::PULSAR) {
+        return false;
+    }
+    if (_service_url != ctx->pulsar_info->service_url || _topic != ctx->pulsar_info->topic ||
+        _subscription != ctx->pulsar_info->subscription) {
+        return false;
+    }
+    // check properties
+    if (_custom_properties.size() != ctx->pulsar_info->properties.size()) {
+        return false;
+    }
+    for (auto& item : ctx->pulsar_info->properties) {
+        auto it = _custom_properties.find(item.first);
+        if (it == _custom_properties.end() || it->second != item.second) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+std::string PulsarDataConsumer::substring_prefix_json(std::string data) {
+    // 找到以 "{" 开头的位置
+    size_t startPos = data.find("{\"");
+
+    // 如果找到了，则截取并返回子字符串
+    if (startPos != std::string::npos) {
+        return data.substr(startPos);
+    } else {
+        return data;
+    }
+}
+
+size_t PulsarDataConsumer::len_of_actual_data(const char* data) {
+    size_t length = 0;
+    while (data[length] != '\0') {
+        ++length;
+    }
+    return length;
+}
+
+std::vector<const char*> PulsarDataConsumer::convert_rows(const char* data) {
+    std::vector<const char*> targets;
+    rapidjson::Document source;
+    rapidjson::Document destination;
+    rapidjson::StringBuffer buffer;
+    if(!source.Parse(data).HasParseError()) {
+        if (source.HasMember("events") && source["events"].IsArray()) {
+            const rapidjson::Value& array = source["events"];
+            size_t len = array.Size();
+            for(size_t i = 0; i < len; i++) {
+                destination.SetObject();
+                for (auto& member : source.GetObject()) {
+                    const char* key = member.name.GetString();
+                    if (std::strcmp(key, "events") != 0) {
+                        rapidjson::Value keyName(key, destination.GetAllocator());
+                        rapidjson::Value sourceValue(rapidjson::kObjectType);
+                        sourceValue.CopyFrom(source[key], destination.GetAllocator());
+                        destination.AddMember(keyName, sourceValue, destination.GetAllocator());
+                    } else {
+                        rapidjson::Value& object = const_cast<rapidjson::Value&>(array[i]);
+                        rapidjson::Value eventName("event", destination.GetAllocator());
+                        destination.AddMember(eventName, object, destination.GetAllocator());
+                    }
+                }
+
+                buffer.Clear();
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                destination.Accept(writer);
+
+                size_t buffer_size = buffer.GetSize();
+                char* dest_string = new char[buffer_size + 1];
+                std::memcpy(dest_string, buffer.GetString(), buffer_size);
+                dest_string[buffer_size] = '\0';
+                targets.push_back(dest_string);
+
+                destination.RemoveAllMembers();
+            }
+        } else {
+            targets.push_back(data);
+        }
+    } else {
+        targets.push_back(data);
+    }
+    destination.Clear();
+    rapidjson::Document().Swap(destination);
+    source.Clear();
+    rapidjson::Document().Swap(source);
+    return targets;
+}
+
 } // end namespace doris

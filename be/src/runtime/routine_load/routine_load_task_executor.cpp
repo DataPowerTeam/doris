@@ -170,6 +170,93 @@ Status RoutineLoadTaskExecutor::get_kafka_latest_offsets_for_partitions(
     return st;
 }
 
+Status RoutineLoadTaskExecutor::get_pulsar_partition_meta(const PPulsarMetaProxyRequest& request,
+                                                          std::vector<std::string>* partitions) {
+    DCHECK(request.has_pulsar_info());
+
+    // This context is meaningless, just for unifing the interface
+    std::shared_ptr<StreamLoadContext> ctx = std::make_shared<StreamLoadContext>(_exec_env);
+    ctx->load_type = TLoadType::ROUTINE_LOAD;
+    ctx->load_src_type = TLoadSourceType::PULSAR;
+    ctx->label = "NaN";
+
+    // convert PPulsarInfo to TPulsarLoadInfo
+    TPulsarLoadInfo t_info;
+    t_info.service_url = request.pulsar_info().service_url();
+    t_info.topic = request.pulsar_info().topic();
+    t_info.subscription = request.pulsar_info().subscription();
+    std::map<std::string, std::string> properties;
+    for (int i = 0; i < request.pulsar_info().properties_size(); ++i) {
+        const PStringPair& pair = request.pulsar_info().properties(i);
+        properties.emplace(pair.key(), pair.val());
+    }
+    t_info.__set_properties(properties);
+
+    ctx->pulsar_info = std::make_unique<PulsarLoadInfo>(t_info);
+    ctx->need_rollback = false;
+
+    std::shared_ptr<DataConsumer> consumer;
+    RETURN_IF_ERROR(_data_consumer_pool.get_consumer(ctx, &consumer));
+
+    Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_topic_partition(partitions);
+    if (st.ok()) {
+        _data_consumer_pool.return_consumer(consumer);
+    }
+    return st;
+}
+
+Status RoutineLoadTaskExecutor::get_pulsar_partition_backlog(const PPulsarBacklogProxyRequest& request,
+                                                             std::vector<int64_t>* backlog_num) {
+    DCHECK(request.has_pulsar_info());
+
+    // This context is meaningless, just for unifing the interface
+    std::shared_ptr<StreamLoadContext> ctx = std::make_shared<StreamLoadContext>(_exec_env);
+    ctx->load_type = TLoadType::ROUTINE_LOAD;
+    ctx->load_src_type = TLoadSourceType::PULSAR;
+    ctx->label = "NaN";
+
+    // convert PPulsarInfo to TPulsarLoadInfo
+    TPulsarLoadInfo t_info;
+    t_info.service_url = request.pulsar_info().service_url();
+    t_info.topic = request.pulsar_info().topic();
+    t_info.subscription = request.pulsar_info().subscription();
+    std::map<std::string, std::string> properties;
+    for (int i = 0; i < request.pulsar_info().properties_size(); ++i) {
+        const PStringPair& pair = request.pulsar_info().properties(i);
+        properties.emplace(pair.key(), pair.val());
+    }
+    t_info.__set_properties(properties);
+
+    ctx->pulsar_info = std::make_unique<PulsarLoadInfo>(t_info);
+    ctx->need_rollback = false;
+
+    // convert pb repeated value to vector
+    std::vector<std::string> partitions;
+    partitions.reserve(request.partitions().size());
+    for (auto p : request.partitions()) {
+        partitions.push_back(p);
+    }
+
+    backlog_num->reserve(partitions.size());
+
+    Status st;
+    std::shared_ptr<DataConsumer> consumer;
+    RETURN_IF_ERROR(_data_consumer_pool.get_consumer(ctx, &consumer));
+    for (auto p : partitions) {
+        int64_t backlog = 0;
+        RETURN_IF_ERROR(std::static_pointer_cast<PulsarDataConsumer>(consumer)->assign_partition(p, ctx));
+        st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition_backlog(&backlog);
+        std::static_pointer_cast<PulsarDataConsumer>(consumer).reset();
+        backlog_num->push_back(backlog);
+    }
+
+    if (st.ok()) {
+        _data_consumer_pool.return_consumer(consumer);
+    }
+
+    return Status::OK();
+}
+
 Status RoutineLoadTaskExecutor::submit_task(const TRoutineLoadTask& task) {
     std::unique_lock<std::mutex> l(_lock);
     if (_task_map.find(task.id) != _task_map.end()) {
@@ -237,6 +324,15 @@ Status RoutineLoadTaskExecutor::submit_task(const TRoutineLoadTask& task) {
     switch (task.type) {
     case TLoadSourceType::KAFKA:
         ctx->kafka_info.reset(new KafkaLoadInfo(task.kafka_load_info));
+        break;
+    case TLoadSourceType::PULSAR:
+        ctx->pulsar_info.reset(new PulsarLoadInfo(task.pulsar_load_info));
+        if (!_last_ack_offset.empty()) {
+            ctx->pulsar_info->ack_offset = _last_ack_offset;
+            for (auto& kv : ctx->pulsar_info->ack_offset) {
+                LOG(INFO) << "init pulsar_info ack_offset :" << kv.second << ", partition: " << kv.first;
+            }
+        }
         break;
     default:
         LOG(WARNING) << "unknown load source type: " << task.type;
@@ -307,6 +403,16 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         }
         break;
     }
+    case TLoadSourceType::PULSAR: {
+        pipe = std::make_shared<io::PulsarConsumerPipe>();
+        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)->assign_topic_partitions(ctx);
+        if (!st.ok()) {
+            err_handler(ctx, st, st.to_string());
+            cb(ctx);
+            return;
+        }
+        break;
+    }
     default: {
         std::stringstream ss;
         ss << "unknown routine load task type: " << ctx->load_type;
@@ -347,11 +453,20 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     // wait for all consumers finished
     HANDLE_ERROR(ctx->future.get(), "consume failed");
 
+    // check received and load rows
+    LOG(INFO) << "routine load task received rows: " << consumer_grp.get()->get_consumer_rows()
+              << " load total rows: " << ctx.get()->number_total_rows
+              << " loaded rows: " << ctx.get()->number_loaded_rows
+              << " filtered rows: " << ctx.get()->number_filtered_rows
+              << " unselected rows: " << ctx.get()->number_unselected_rows;
+    DCHECK(consumer_grp.get()->get_consumer_rows() == ctx.get()->number_total_rows);
+    consumer_grp.get()->set_consumer_rows(0);
+
     ctx->load_cost_millis = UnixMillis() - ctx->start_millis;
 
     // return the consumer back to pool
     // call this before commit txn, in case the next task can come very fast
-    consumer_pool->return_consumers(consumer_grp.get());
+//    consumer_pool->return_consumers(consumer_grp.get());
 
     // commit txn
     HANDLE_ERROR(_exec_env->stream_load_executor()->commit_txn(ctx.get()), "commit failed");
@@ -390,9 +505,25 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         }};
         break;
     }
+    case TLoadSourceType::PULSAR: {
+        _last_ack_offset.clear();
+        _last_ack_offset = ctx->pulsar_info->ack_offset;
+        for (auto& kv : _last_ack_offset) {
+            LOG(INFO) << "_last_ack_offset should be ack  :" << kv.second << ", partition: " << kv.first;
+        }
+        //do ack
+        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)->acknowledge_cumulative(ctx);
+        if (!st.ok()) {
+            LOG(WARNING) << st;
+        }
+        break;
+    }
     default:
         break;
     }
+    // return the consumer back to pool
+    // call this before commit txn, in case the next task can come very fast
+    consumer_pool->return_consumers(consumer_grp.get());
     cb(ctx);
 }
 

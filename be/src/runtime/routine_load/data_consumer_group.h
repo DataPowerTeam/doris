@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "common/status.h"
+#include "io/fs/kafka_consumer_pipe.h"
 #include "runtime/routine_load/data_consumer.h"
 #include "util/blocking_queue.hpp"
 #include "util/uid_util.h"
@@ -59,6 +60,10 @@ public:
         ++_counter;
     }
 
+    int64_t get_consumer_rows() const { return _rows; }
+
+    void set_consumer_rows(int64_t rows) { _rows = rows; }
+
     // start all consumers
     virtual Status start_all(std::shared_ptr<StreamLoadContext> ctx) { return Status::OK(); }
 
@@ -73,6 +78,8 @@ protected:
     // when the counter becomes zero, shutdown the queue to finish
     std::mutex _mutex;
     int _counter;
+    // received total rows
+    int64_t _rows {0};
 };
 
 // for kafka
@@ -95,6 +102,41 @@ private:
 private:
     // blocking queue to receive msgs from all consumers
     BlockingQueue<RdKafka::Message*> _queue;
+};
+
+// for pulsar
+class PulsarDataConsumerGroup : public DataConsumerGroup {
+public:
+    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(500) {}
+
+    ~PulsarDataConsumerGroup() override;
+
+    Status start_all(std::shared_ptr<StreamLoadContext> ctx) override;
+    // assign topic partitions to all consumers equally
+    Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
+
+    // acknowledge pulsar message
+    Status acknowledge_cumulative(std::shared_ptr<StreamLoadContext> ctx);
+
+private:
+    // start a single consumer
+    void actual_consume(const std::shared_ptr<DataConsumer>& consumer, BlockingQueue<pulsar::Message*>* queue,
+                        int64_t max_running_time_ms, const ConsumeFinishCallback& cb);
+
+    void get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx);
+
+    std::string substring_prefix_json(std::string data);
+
+    size_t len_of_actual_data(const char* data);
+
+    std::vector<const char*> convert_rows(const char* data);
+
+    // acknowledge pulsar message
+    void acknowledge(pulsar::MessageId& message_id, std::string partition);
+
+private:
+    // blocking queue to receive msgs from all consumers
+    BlockingQueue<pulsar::Message*> _queue;
 };
 
 } // end namespace doris
