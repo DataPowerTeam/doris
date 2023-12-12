@@ -680,6 +680,6 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
 
     @Override
     public double getMaxFilterRatio() {
-        return maxFilterRatio;
+        return 1.0;
     }
 }
