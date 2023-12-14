@@ -327,7 +327,7 @@ Status RoutineLoadTaskExecutor::submit_task(const TRoutineLoadTask& task) {
         break;
     case TLoadSourceType::PULSAR:
         ctx->pulsar_info.reset(new PulsarLoadInfo(task.pulsar_load_info));
-        copy_from_ack_map(ctx->pulsar_info->ack_offset);
+        RoutineLoadTaskExecutor::copy_from_ack_map(ctx->pulsar_info->ack_offset);
         for (auto& kv : ctx->pulsar_info->ack_offset) {
             LOG(INFO) << "init pulsar_info ack_offset :" << kv.second << ", partition: " << kv.first;
         }
@@ -504,7 +504,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        copy_to_ack_map(ctx->pulsar_info->ack_offset);
+        RoutineLoadTaskExecutor::copy_to_ack_map(ctx->pulsar_info->ack_offset);
         for (auto& kv : ctx->pulsar_info->ack_offset) {
             LOG(INFO) << "_last_ack_offset should be ack  :" << kv.second << ", partition: " << kv.first;
         }
