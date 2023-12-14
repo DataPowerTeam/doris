@@ -62,6 +62,9 @@ using namespace ErrorCode;
 
 DEFINE_GAUGE_METRIC_PROTOTYPE_2ARG(routine_load_task_count, MetricUnit::NOUNIT);
 
+std::map<std::string, pulsar::MessageId> RoutineLoadTaskExecutor::_last_ack_offset;
+std::mutex RoutineLoadTaskExecutor::_ack_mutex;
+
 RoutineLoadTaskExecutor::RoutineLoadTaskExecutor(ExecEnv* exec_env)
         : _exec_env(exec_env),
           _thread_pool(config::routine_load_thread_pool_size, config::routine_load_thread_pool_size,
