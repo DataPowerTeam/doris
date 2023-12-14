@@ -584,7 +584,7 @@ static void copy_to_ack_map(std::map<std::string, pulsar::MessageId> &map) {
 
 static void copy_from_ack_map(std::map<std::string, pulsar::MessageId> &map) {
     std::lock_guard<std::mutex> lock(RoutineLoadTaskExecutor::_ack_mutex);
-    if (!_last_ack_offset.empty()) {
+    if (!RoutineLoadTaskExecutor::_last_ack_offset.empty()) {
         map = RoutineLoadTaskExecutor::_last_ack_offset;
     }
 }
