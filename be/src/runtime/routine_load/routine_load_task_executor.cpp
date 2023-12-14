@@ -327,11 +327,9 @@ Status RoutineLoadTaskExecutor::submit_task(const TRoutineLoadTask& task) {
         break;
     case TLoadSourceType::PULSAR:
         ctx->pulsar_info.reset(new PulsarLoadInfo(task.pulsar_load_info));
-        if (!_last_ack_offset.empty()) {
-            ctx->pulsar_info->ack_offset = _last_ack_offset;
-            for (auto& kv : ctx->pulsar_info->ack_offset) {
-                LOG(INFO) << "init pulsar_info ack_offset :" << kv.second << ", partition: " << kv.first;
-            }
+        copy_from_ack_map(ctx->pulsar_info->ack_offset);
+        for (auto& kv : ctx->pulsar_info->ack_offset) {
+            LOG(INFO) << "init pulsar_info ack_offset :" << kv.second << ", partition: " << kv.first;
         }
         break;
     default:
@@ -506,9 +504,8 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        _last_ack_offset.clear();
-        _last_ack_offset = ctx->pulsar_info->ack_offset;
-        for (auto& kv : _last_ack_offset) {
+        copy_to_ack_map(ctx->pulsar_info->ack_offset);
+        for (auto& kv : ctx->pulsar_info->ack_offset) {
             LOG(INFO) << "_last_ack_offset should be ack  :" << kv.second << ", partition: " << kv.first;
         }
         //do ack
@@ -576,6 +573,20 @@ Status RoutineLoadTaskExecutor::_execute_plan_for_test(std::shared_ptr<StreamLoa
     std::thread t1(mock_consumer);
     t1.detach();
     return Status::OK();
+}
+
+static void copy_to_ack_map(std::map<std::string, pulsar::MessageId> &map) {
+    std::lock_guard<std::mutex> lock(ack_mutex);
+    for (auto& kv : map) {
+        _last_ack_offset[kv.first] = kv.second;
+    }
+}
+
+static void copy_from_ack_map(std::map<std::string, pulsar::MessageId> &map) {
+    std::lock_guard<std::mutex> lock(ack_mutex);
+    if (!_last_ack_offset.empty()) {
+        map = _last_ack_offset;
+    }
 }
 
 } // namespace doris

@@ -68,6 +68,9 @@ public:
 
    Status get_pulsar_partition_backlog(const PPulsarBacklogProxyRequest& request, std::vector<int64_t>* backlog_num);
 
+   static void copy_to_ack_map(std::map<std::string, pulsar::MessageId> &map);
+
+   static void copy_from_ack_map(std::map<std::string, pulsar::MessageId> &map);
 
 private:
     // execute the task
@@ -92,7 +95,8 @@ private:
     // task id -> load context
     std::unordered_map<UniqueId, std::shared_ptr<StreamLoadContext>> _task_map;
 
-    std::map<std::string, pulsar::MessageId> _last_ack_offset;
+    static std::map<std::string, pulsar::MessageId> _last_ack_offset;
+    static std::mutex ack_mutex;
 };
 
 } // namespace doris
