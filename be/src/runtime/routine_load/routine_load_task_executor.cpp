@@ -576,14 +576,14 @@ Status RoutineLoadTaskExecutor::_execute_plan_for_test(std::shared_ptr<StreamLoa
 }
 
 static void copy_to_ack_map(std::map<std::string, pulsar::MessageId> &map) {
-    std::lock_guard<std::mutex> lock(ack_mutex);
+    std::lock_guard<std::mutex> lock(_ack_mutex);
     for (auto& kv : map) {
         _last_ack_offset[kv.first] = kv.second;
     }
 }
 
 static void copy_from_ack_map(std::map<std::string, pulsar::MessageId> &map) {
-    std::lock_guard<std::mutex> lock(ack_mutex);
+    std::lock_guard<std::mutex> lock(_ack_mutex);
     if (!_last_ack_offset.empty()) {
         map = _last_ack_offset;
     }

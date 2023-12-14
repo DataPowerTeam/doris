@@ -86,6 +86,10 @@ private:
     Status _prepare_ctx(const PKafkaMetaProxyRequest& request,
                         std::shared_ptr<StreamLoadContext> ctx);
 
+public:
+    static std::map<std::string, pulsar::MessageId> _last_ack_offset;
+    static std::mutex _ack_mutex;
+
 private:
     ExecEnv* _exec_env;
     PriorityThreadPool _thread_pool;
@@ -94,9 +98,6 @@ private:
     std::mutex _lock;
     // task id -> load context
     std::unordered_map<UniqueId, std::shared_ptr<StreamLoadContext>> _task_map;
-
-    static std::map<std::string, pulsar::MessageId> _last_ack_offset;
-    static std::mutex ack_mutex;
 };
 
 } // namespace doris
