@@ -594,14 +594,14 @@ DEFINE_Bool(enable_metric_calculator, "true");
 DEFINE_mInt32(max_consumer_num_per_group, "3");
 
 // Max pulsar consumer num in one data consumer group, for routine load.
-DEFINE_mInt32(max_pulsar_consumer_num_per_group, "100");
+DEFINE_mInt32(max_pulsar_consumer_num_per_group, "10");
 
 // pulsar request timeout
-DEFINE_Int32(routine_load_pulsar_timeout_second, "60");
+DEFINE_Int32(routine_load_pulsar_timeout_second, "10");
 
 // the size of thread pool for routine load task.
 // this should be larger than FE config 'max_routine_load_task_num_per_be' (default 5)
-DEFINE_Int32(routine_load_thread_pool_size, "100");
+DEFINE_Int32(routine_load_thread_pool_size, "10");
 
 // max external scan cache batch count, means cache max_memory_cache_batch_count * batch_size row
 // default is 20, batch_size's default value is 1024 means 20 * 1024 rows will be cached
@@ -781,7 +781,7 @@ DEFINE_String(kafka_debug, "disable");
 // The number of pool siz of routine load consumer.
 // If you meet the error describe in https://github.com/edenhill/librdkafka/issues/3608
 // Change this size to 0 to fix it temporarily.
-DEFINE_Int32(routine_load_consumer_pool_size, "100");
+DEFINE_Int32(routine_load_consumer_pool_size, "10");
 
 // Used in single-stream-multi-table load. When receive a batch of messages from kafka,
 // if the size of batch is more than this threshold, we will request plans for all related tables.
