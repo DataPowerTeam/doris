@@ -361,11 +361,6 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             //filter invalid prefix of json
             std::string filter_data = substring_prefix_json(msg->getDataAsString());
-            bool is_filter = is_filter_event_ids(filter_data);
-            if (!is_filter) {
-                left_time = ctx->max_interval_s * 1000 - watch.elapsed_time() / 1000 / 1000;
-                continue;
-            }
             std::vector<const char*>  rows = convert_rows(filter_data.c_str());
 
             VLOG(3)   << "get pulsar message:" << msg->getDataAsString()
@@ -374,6 +369,10 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             Status st;
             for(const char* row : rows) {
+                bool is_filter = is_filter_event_ids(row);
+                if (!is_filter) {
+                    continue;
+                }
                 size_t row_len = len_of_actual_data(row);
                 st = (pulsar_pipe.get()->*append_data)(row, row_len);
                 if (!st.ok()) {
@@ -537,12 +536,9 @@ std::vector<const char*> PulsarDataConsumerGroup::convert_rows(const char* data)
     return targets;
 }
 
-bool PulsarDataConsumerGroup::is_filter_event_ids(std::string data) {
-    for (auto& event_id : _filter_event_ids) {
-        std::string filter_json = "\"event_id\":\"" + event_id + "\"";
-        if (data.find(filter_json) != std::string::npos) {
-            LOG(INFO) << "get pulsar message: " << data
-                      << "find event_id: " << filter_json;
+bool PulsarDataConsumerGroup::is_filter_event_ids(const char* data) {
+    for (const char* event_id : _filter_event_ids) {
+        if (strstr(data, event_id) != nullptr) {
             return true;
         }
     }
