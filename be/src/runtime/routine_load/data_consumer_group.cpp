@@ -541,6 +541,8 @@ bool PulsarDataConsumerGroup::is_filter_event_ids(std::string data) {
     for (auto& event_id : _filter_event_ids) {
         std::string filter_json = "\"event_id\":\"" + event_id + "\"";
         if (data.find(filter_json) != std::string::npos) {
+            LOG(INFO) << "get pulsar message: " << data
+                      << "find event_id: " << filter_json;
             return true;
         }
     }
