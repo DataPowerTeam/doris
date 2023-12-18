@@ -252,7 +252,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 capture2 = [this, &result_st](const Status& st) {
                  std::unique_lock<std::mutex> lock(_mutex);
                  _counter--;
-                 LOG(INFO) << "group counter is: " << _counter << ", grp: " << _grp_id;
+                 VLOG(1) << "group counter is: " << _counter << ", grp: " << _grp_id;
                  if (_counter == 0) {
                      _queue.shutdown();
                      LOG(INFO)
@@ -265,7 +265,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
             LOG(WARNING) << "failed to submit data consumer: " << consumer->id() << ", group id: " << _grp_id;
             return Status::InternalError("failed to submit data consumer");
         } else {
-            LOG(INFO) << "submit a data consumer: " << consumer->id() << ", group id: " << _grp_id;
+            VLOG(1) << "submit a data consumer: " << consumer->id() << ", group id: " << _grp_id;
         }
     }
 
@@ -364,7 +364,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
             std::string filter_data = substring_prefix_json(msg->getDataAsString());
             std::vector<const char*>  rows = convert_rows(filter_data.c_str());
 
-            LOG(INFO) << "get pulsar message:" << msg->getDataAsString()
+            VLOG(3)   << "get pulsar message:" << msg->getDataAsString()
                       << ", partition: " << partition << ", message id: " << msg_id
                       << ", len: " << len << ", size: " << msg->getDataAsString().size();
 

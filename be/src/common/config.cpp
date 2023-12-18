@@ -227,7 +227,7 @@ DEFINE_mInt32(status_report_interval, "5");
 // if true, each disk will have a separate thread pool for scanner
 DEFINE_Bool(doris_enable_scanner_thread_pool_per_disk, "true");
 // the timeout of a work thread to wait the blocking priority queue to get a task
-DEFINE_mInt64(doris_blocking_priority_queue_wait_timeout_ms, "5000");
+DEFINE_mInt64(doris_blocking_priority_queue_wait_timeout_ms, "500");
 // number of scanner thread pool size for olap table
 // and the min thread num of remote scanner thread pool
 DEFINE_Int32(doris_scanner_thread_pool_thread_num, "48");
@@ -474,11 +474,11 @@ DEFINE_mInt64(streaming_load_json_max_mb, "100");
 DEFINE_mInt32(streaming_load_rpc_max_alive_time_sec, "1200");
 // the timeout of a rpc to open the tablet writer in remote BE.
 // short operation time, can set a short timeout
-DEFINE_Int32(tablet_writer_open_rpc_timeout_sec, "300");
+DEFINE_Int32(tablet_writer_open_rpc_timeout_sec, "60");
 // You can ignore brpc error '[E1011]The server is overcrowded' when writing data.
 DEFINE_mBool(tablet_writer_ignore_eovercrowded, "true");
 DEFINE_mBool(exchange_sink_ignore_eovercrowded, "true");
-DEFINE_mInt32(slave_replica_writer_rpc_timeout_sec, "300");
+DEFINE_mInt32(slave_replica_writer_rpc_timeout_sec, "60");
 // Whether to enable stream load record function, the default is false.
 // False: disable stream load record
 DEFINE_mBool(enable_stream_load_record, "false");
@@ -914,7 +914,7 @@ DEFINE_mInt64(nodechannel_pending_queue_max_bytes, "67108864");
 // This parameter is usually only used when the FE loses connection,
 // and the BE can automatically cancel the relevant fragment after the timeout,
 // so as to avoid occupying the execution thread for a long time.
-DEFINE_mInt32(max_fragment_start_wait_time_seconds, "300");
+DEFINE_mInt32(max_fragment_start_wait_time_seconds, "30");
 
 // Node role tag for backend. Mix role is the default role, and computation role have no
 // any tablet.

@@ -534,7 +534,6 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
         {
             std::unique_lock<std::mutex> l(_lock);
             if (_cancelled) {
-                LOG(INFO) << "cancel pulsar consumer: " << _id << ", _cancelled: " << _cancelled;
                 break;
             }
         }
@@ -556,16 +555,11 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
             if (received_rows == 0) {
                 _topic_name = msg.get()->getTopicName();
                 LOG(INFO) << "receive first pulsar message. "
-                          << ", len: " << message_str.size()
+                          << "len: " << message_str.size()
                           << ", message id: " << msg_id
                           << ", pulsar consumer: " << _id
                           << ", grp: " << _grp_id
                           << ", topic name: " << _topic_name;
-            } else {
-                LOG(INFO) << "receive pulsar message. "
-                          << ", received_rows: " << received_rows
-                          << ", put_rows: " << put_rows
-                          << ", message id: " << msg_id;
             }
             if (!queue->blocking_put(msg.get())) {
                 // queue is shutdown
