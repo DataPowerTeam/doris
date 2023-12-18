@@ -243,6 +243,9 @@ PulsarDataConsumerGroup::~PulsarDataConsumerGroup() {
 
 Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx) {
     Status result_st = Status::OK();
+
+    LOG(INFO) << "group _consumers size is: " << _consumers.size();
+
     // start all consumers
     for (auto& consumer : _consumers) {
         if (!_thread_pool.offer([this, consumer, capture0 = &_queue, capture1 = ctx->max_interval_s * 1000,
@@ -361,7 +364,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
             std::string filter_data = substring_prefix_json(msg->getDataAsString());
             std::vector<const char*>  rows = convert_rows(filter_data.c_str());
 
-            VLOG(3)   << "get pulsar message:" << msg->getDataAsString()
+            LOG(INFO) << "get pulsar message:" << msg->getDataAsString()
                       << ", partition: " << partition << ", message id: " << msg_id
                       << ", len: " << len << ", size: " << msg->getDataAsString().size();
 

@@ -227,7 +227,7 @@ DEFINE_mInt32(status_report_interval, "5");
 // if true, each disk will have a separate thread pool for scanner
 DEFINE_Bool(doris_enable_scanner_thread_pool_per_disk, "true");
 // the timeout of a work thread to wait the blocking priority queue to get a task
-DEFINE_mInt64(doris_blocking_priority_queue_wait_timeout_ms, "500");
+DEFINE_mInt64(doris_blocking_priority_queue_wait_timeout_ms, "5000");
 // number of scanner thread pool size for olap table
 // and the min thread num of remote scanner thread pool
 DEFINE_Int32(doris_scanner_thread_pool_thread_num, "48");
@@ -591,13 +591,13 @@ DEFINE_mInt32(txn_commit_rpc_timeout_ms, "60000");
 DEFINE_Bool(enable_metric_calculator, "true");
 
 // max consumer num in one data consumer group, for routine load
-DEFINE_mInt32(max_consumer_num_per_group, "100");
+DEFINE_mInt32(max_consumer_num_per_group, "3");
 
 // Max pulsar consumer num in one data consumer group, for routine load.
 DEFINE_mInt32(max_pulsar_consumer_num_per_group, "100");
 
 // pulsar request timeout
-DEFINE_Int32(routine_load_pulsar_timeout_second, "10");
+DEFINE_Int32(routine_load_pulsar_timeout_second, "60");
 
 // the size of thread pool for routine load task.
 // this should be larger than FE config 'max_routine_load_task_num_per_be' (default 5)
@@ -914,7 +914,7 @@ DEFINE_mInt64(nodechannel_pending_queue_max_bytes, "67108864");
 // This parameter is usually only used when the FE loses connection,
 // and the BE can automatically cancel the relevant fragment after the timeout,
 // so as to avoid occupying the execution thread for a long time.
-DEFINE_mInt32(max_fragment_start_wait_time_seconds, "30");
+DEFINE_mInt32(max_fragment_start_wait_time_seconds, "300");
 
 // Node role tag for backend. Mix role is the default role, and computation role have no
 // any tablet.

@@ -552,7 +552,7 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
         case pulsar::ResultOk:
             msg_id = msg.get()->getMessageId();
             message_str = msg.get()->getDataAsString();
-            if (received_rows == 0) {
+            if (received_rows >= 0) {
                 _topic_name = msg.get()->getTopicName();
                 LOG(INFO) << "receive first pulsar message: "
                           << ", len: " << message_str.size()
