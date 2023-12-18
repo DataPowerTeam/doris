@@ -591,7 +591,7 @@ DEFINE_mInt32(txn_commit_rpc_timeout_ms, "60000");
 DEFINE_Bool(enable_metric_calculator, "true");
 
 // max consumer num in one data consumer group, for routine load
-DEFINE_mInt32(max_consumer_num_per_group, "3");
+DEFINE_mInt32(max_consumer_num_per_group, "100");
 
 // Max pulsar consumer num in one data consumer group, for routine load.
 DEFINE_mInt32(max_pulsar_consumer_num_per_group, "100");
