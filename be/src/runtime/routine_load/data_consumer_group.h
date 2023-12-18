@@ -107,7 +107,9 @@ private:
 // for pulsar
 class PulsarDataConsumerGroup : public DataConsumerGroup {
 public:
-    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(500) {}
+    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(500),
+    _filter_event_ids{"010101003","010106001","010601002","011101001","011360003","011410000","011410004",
+    "012101013","017401046","017401057","017401076","020201001","0102044","0105002","0105084"} {}
 
     ~PulsarDataConsumerGroup() override;
 
@@ -134,9 +136,13 @@ private:
     // acknowledge pulsar message
     void acknowledge(pulsar::MessageId& message_id, std::string partition);
 
+    bool is_filter_event_ids(std::string data);
+
 private:
     // blocking queue to receive msgs from all consumers
     BlockingQueue<pulsar::Message*> _queue;
+
+    std::vector<std::string> _filter_event_ids;
 };
 
 } // end namespace doris
