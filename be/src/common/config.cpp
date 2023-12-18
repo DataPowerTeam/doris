@@ -594,7 +594,7 @@ DEFINE_Bool(enable_metric_calculator, "true");
 DEFINE_mInt32(max_consumer_num_per_group, "3");
 
 // Max pulsar consumer num in one data consumer group, for routine load.
-DEFINE_mInt32(max_pulsar_consumer_num_per_group, "10");
+DEFINE_mInt32(max_pulsar_consumer_num_per_group, "100");
 
 // pulsar request timeout
 DEFINE_Int32(routine_load_pulsar_timeout_second, "10");
