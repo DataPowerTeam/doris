@@ -46,7 +46,7 @@ public:
     typedef std::function<void(const Status&)> ConsumeFinishCallback;
 
     DataConsumerGroup()
-            : _grp_id(UniqueId::gen_uid()), _thread_pool(3, 10, "data_consumer"), _counter(0) {}
+            : _grp_id(UniqueId::gen_uid()), _thread_pool(6, 10, "data_consumer"), _counter(0) {}
 
     virtual ~DataConsumerGroup() { _consumers.clear(); }
 
@@ -85,7 +85,7 @@ protected:
 // for kafka
 class KafkaDataConsumerGroup : public DataConsumerGroup {
 public:
-    KafkaDataConsumerGroup() : DataConsumerGroup(), _queue(500) {}
+    KafkaDataConsumerGroup() : DataConsumerGroup(), _queue(1000) {}
 
     virtual ~KafkaDataConsumerGroup();
 
@@ -107,7 +107,7 @@ private:
 // for pulsar
 class PulsarDataConsumerGroup : public DataConsumerGroup {
 public:
-    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(500),
+    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(1000),
     _filter_event_ids{"\"010101003\"","\"010106001\"","\"010601002\"","\"011101001\"","\"011360003\"","\"011410000\"",
     "\"011410004\"","\"012101013\"","\"017401046\"","\"017401057\"","\"017401076\"","\"020201001\"","\"0102044\"",
     "\"0105002\"","\"0105084\""} {}
