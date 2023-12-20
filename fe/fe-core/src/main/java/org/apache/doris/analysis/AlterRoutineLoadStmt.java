@@ -189,7 +189,7 @@ public class AlterRoutineLoadStmt extends DdlStmt {
             long maxBatchSizeBytes = Util.getLongPropertyOrDefault(
                     jobProperties.get(CreateRoutineLoadStmt.MAX_BATCH_SIZE_PROPERTY),
                     -1, CreateRoutineLoadStmt.MAX_BATCH_SIZE_PRED,
-                    CreateRoutineLoadStmt.MAX_BATCH_SIZE_PROPERTY + " should between 100MB and 1GB");
+                    CreateRoutineLoadStmt.MAX_BATCH_SIZE_PROPERTY + " should between 100MB and 2GB");
             analyzedJobProperties.put(CreateRoutineLoadStmt.MAX_BATCH_SIZE_PROPERTY,
                     String.valueOf(maxBatchSizeBytes));
         }

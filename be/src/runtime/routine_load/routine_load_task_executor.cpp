@@ -331,9 +331,9 @@ Status RoutineLoadTaskExecutor::submit_task(const TRoutineLoadTask& task) {
     case TLoadSourceType::PULSAR:
         ctx->pulsar_info.reset(new PulsarLoadInfo(task.pulsar_load_info));
         RoutineLoadTaskExecutor::copy_from_ack_map(ctx->pulsar_info->ack_offset);
-        for (auto& kv : ctx->pulsar_info->ack_offset) {
-            LOG(INFO) << "init pulsar_info ack_offset :" << kv.second << ", partition: " << kv.first;
-        }
+//        for (auto& kv : ctx->pulsar_info->ack_offset) {
+//            LOG(INFO) << "init pulsar_info ack_offset :" << kv.second << ", partition: " << kv.first;
+//        }
         break;
     default:
         LOG(WARNING) << "unknown load source type: " << task.type;
