@@ -583,7 +583,8 @@ void RoutineLoadTaskExecutor::copy_to_ack_map(std::map<std::string, pulsar::Mess
     for (auto& kv : map) {
         if (RoutineLoadTaskExecutor::_last_ack_offset.find(kv.first) !=
                 RoutineLoadTaskExecutor::_last_ack_offset.end()) {
-            delete RoutineLoadTaskExecutor::_last_ack_offset[kv.first]; // 如果不为空，则释放资源
+            pulsar::Message* msg = &RoutineLoadTaskExecutor::_last_ack_offset[kv.first];
+            delete msg; // 如果不为空，则释放资源
         }
         RoutineLoadTaskExecutor::_last_ack_offset[kv.first] = kv.second;
     }
