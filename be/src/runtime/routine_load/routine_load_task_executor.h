@@ -87,7 +87,7 @@ private:
                         std::shared_ptr<StreamLoadContext> ctx);
 
 public:
-    static std::map<std::string, pulsar::MessageId> _last_ack_offset;
+    static std::map<std::string, pulsar::MessageId*> _last_ack_offset;
     static std::mutex _ack_mutex;
 
 private:

@@ -62,7 +62,7 @@ using namespace ErrorCode;
 
 DEFINE_GAUGE_METRIC_PROTOTYPE_2ARG(routine_load_task_count, MetricUnit::NOUNIT);
 
-std::map<std::string, pulsar::MessageId> RoutineLoadTaskExecutor::_last_ack_offset;
+std::map<std::string, pulsar::MessageId*> RoutineLoadTaskExecutor::_last_ack_offset;
 std::mutex RoutineLoadTaskExecutor::_ack_mutex;
 
 RoutineLoadTaskExecutor::RoutineLoadTaskExecutor(ExecEnv* exec_env)
@@ -583,17 +583,18 @@ void RoutineLoadTaskExecutor::copy_to_ack_map(std::map<std::string, pulsar::Mess
     for (auto& kv : map) {
         auto it = RoutineLoadTaskExecutor::_last_ack_offset.find(kv.first);
         if (it != RoutineLoadTaskExecutor::_last_ack_offset.end()) {
-            delete it->second; // 如果不为空，则释放资源
-            RoutineLoadTaskExecutor::_last_ack_offset.erase(it);
+            delete it->second;
         }
-        RoutineLoadTaskExecutor::_last_ack_offset[kv.first] = kv.second;
+        RoutineLoadTaskExecutor::_last_ack_offset[kv.first] = &kv.second;
     }
 }
 
 void RoutineLoadTaskExecutor::copy_from_ack_map(std::map<std::string, pulsar::MessageId> &map) {
     std::lock_guard<std::mutex> lock(RoutineLoadTaskExecutor::_ack_mutex);
     if (!RoutineLoadTaskExecutor::_last_ack_offset.empty()) {
-        map = RoutineLoadTaskExecutor::_last_ack_offset;
+        for (auto& kv : RoutineLoadTaskExecutor::_last_ack_offset) {
+            map[kv.first] = *kv.second;
+        }
     }
 }
 
