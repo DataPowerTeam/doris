@@ -581,10 +581,10 @@ Status RoutineLoadTaskExecutor::_execute_plan_for_test(std::shared_ptr<StreamLoa
 void RoutineLoadTaskExecutor::copy_to_ack_map(std::map<std::string, pulsar::MessageId> &map) {
     std::lock_guard<std::mutex> lock(RoutineLoadTaskExecutor::_ack_mutex);
     for (auto& kv : map) {
-        if (RoutineLoadTaskExecutor::_last_ack_offset.find(kv.first) !=
-                RoutineLoadTaskExecutor::_last_ack_offset.end()) {
-            pulsar::Message* msg = &RoutineLoadTaskExecutor::_last_ack_offset[kv.first];
-            delete msg; // 如果不为空，则释放资源
+        auto it = RoutineLoadTaskExecutor::_last_ack_offset.find(kv.first);
+        if (it != RoutineLoadTaskExecutor::_last_ack_offset.end()) {
+            delete it->second; // 如果不为空，则释放资源
+            RoutineLoadTaskExecutor::_last_ack_offset.erase(it);
         }
         RoutineLoadTaskExecutor::_last_ack_offset[kv.first] = kv.second;
     }
