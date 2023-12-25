@@ -24,6 +24,8 @@
 #include <string>
 #include <utility>
 #include <chrono> // IWYU pragma: keep
+#include <sstream>
+#include <algorithm>
 
 #include "common/logging.h"
 #include "librdkafka/rdkafkacpp.h"
@@ -284,6 +286,14 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     // copy one
     std::map<std::string, pulsar::MessageId> last_ack_offset = ctx->pulsar_info->ack_offset;
     std::set<std::string> exist_repeated_ack;
+    //init _filter_event_ids
+    for (auto& item : ctx->pulsar_info->properties) {
+        if (item.first == "event.ids") {
+            init_filter_event_ids(item.second);
+            LOG(INFO) << "init vector _filter_event_ids. size: " << init_filter_event_ids.size()
+                      << "string: " << item.second;
+        }
+    }
 
     //improve performance
     Status (io::PulsarConsumerPipe::*append_data)(const char* data, size_t size);
@@ -537,12 +547,28 @@ std::vector<const char*> PulsarDataConsumerGroup::convert_rows(const char* data)
 }
 
 bool PulsarDataConsumerGroup::is_filter_event_ids(const char* data) {
+    if (_filter_event_ids.empty()) {
+        return true;
+    }
     for (const char* event_id : _filter_event_ids) {
         if (strstr(data, event_id) != nullptr) {
             return true;
         }
     }
     return false;
+}
+
+void PulsarDataConsumerGroup::init_filter_event_ids(const std::string& input) {
+    std::vector<std::string> splitResult;
+    std::istringstream ss(input);
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+        splitResult.push_back(token);
+    }
+    _filter_event_ids.reserve(splitResult.size());
+
+    std::transform(splitResult.begin(), splitResult.end(), std::back_inserter(_filter_event_ids),
+            [](const std::string& str) { return str.c_str(); });
 }
 
 } // namespace doris
