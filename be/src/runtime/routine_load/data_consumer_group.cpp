@@ -407,7 +407,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                delete[] *it;  // 删除指针指向的字符串内存
            }
            rows.clear();
-           rows.swap(std::vector<const char*>())
+           rows.swap(std::vector<const char*>());
            delete msg;
         } else {
             // queue is empty and shutdown
