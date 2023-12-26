@@ -290,7 +290,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     for (auto& item : ctx->pulsar_info->properties) {
         if (item.first == "event.ids") {
             init_filter_event_ids(item.second);
-            LOG(INFO) << "init vector _filter_event_ids. size: " << init_filter_event_ids.size()
+            LOG(INFO) << "init vector _filter_event_ids. size: " << _filter_event_ids.size()
                       << "string: " << item.second;
         }
     }
