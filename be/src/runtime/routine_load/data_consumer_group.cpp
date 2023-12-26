@@ -388,13 +388,15 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 if (!st.ok()) {
                     LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", row =" << row;
                     break;
+                } else {
+                    left_bytes -= row_len;
                 }
             }
 
            if (st.ok()) {
                received_rows++;
                // len of receive origin message from pulsar
-               left_bytes -= len;
+//               left_bytes -= len;
                if (ack_offset[partition] >= msg_id) {
                   LOG(WARNING) << "find repeated message id: " << msg_id;
                }
