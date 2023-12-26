@@ -248,6 +248,17 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
     LOG(INFO) << "group _consumers size is: " << _consumers.size();
 
+    //init _filter_event_ids
+    for (auto& item : ctx->pulsar_info->properties) {
+        if (item.first == "event.ids") {
+            init_filter_event_ids(item.second);
+            LOG(INFO) << "init vector _filter_event_ids. size: " << _filter_event_ids.size();
+            for (auto& event_id : _filter_event_ids) {
+                LOG(INFO) << "_filter_event_ids. event_id: " << event_id;
+            }
+        }
+    }
+
     // start all consumers
     for (auto& consumer : _consumers) {
         if (!_thread_pool.offer([this, consumer, capture0 = &_queue, capture1 = ctx->max_interval_s * 1000,
@@ -274,6 +285,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     // consuming from queue and put data to stream load pipe
     int64_t left_time = ctx->max_interval_s * 1000;
     int64_t received_rows = 0;
+    int64_t add_rows = 0;
     int64_t left_bytes = ctx->max_batch_size;
 
     std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe = std::static_pointer_cast<io::PulsarConsumerPipe>(ctx->body_sink);
@@ -286,14 +298,6 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     // copy one
     std::map<std::string, pulsar::MessageId> last_ack_offset = ctx->pulsar_info->ack_offset;
     std::set<std::string> exist_repeated_ack;
-    //init _filter_event_ids
-    for (auto& item : ctx->pulsar_info->properties) {
-        if (item.first == "event.ids") {
-            init_filter_event_ids(item.second);
-            LOG(INFO) << "init vector _filter_event_ids. size: " << _filter_event_ids.size()
-                      << "string: " << item.second;
-        }
-    }
 
     //improve performance
     Status (io::PulsarConsumerPipe::*append_data)(const char* data, size_t size);
@@ -309,7 +313,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     while (true) {
         if (eos || left_time <= 0 || left_bytes <= 0) {
             LOG(INFO) << "consumer group done: " << _grp_id
-                      << ". consume time(ms)=" << ctx->max_interval_s * 1000 - left_time
+                      << ". consume time(ms)=" << ctx->max_interval_s * 1000 - left_time << ", add rows=" << add_rows
                       << ", received rows=" << received_rows << ", received bytes=" << ctx->max_batch_size - left_bytes
                       << ", eos: " << eos << ", left_time: " << left_time << ", left_bytes: " << left_bytes
                       << ", blocking get time(us): " << _queue.total_get_wait_time() / 1000
@@ -389,6 +393,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                     LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", row =" << row;
                     break;
                 } else {
+                    add_rows++;
                     left_bytes -= row_len;
                 }
             }
