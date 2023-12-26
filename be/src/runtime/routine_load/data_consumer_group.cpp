@@ -402,10 +402,12 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                    }
                }
            }
-           for(const char* row : rows) {
-                delete[] row;
+           // 删除指针指向的内存并清空向量
+           for (auto it = rows.begin(); it != rows.end(); ++it) {
+               delete[] *it;  // 删除指针指向的字符串内存
            }
            rows.clear();
+           rows.swap(std::vector<const char*>())
            delete msg;
         } else {
             // queue is empty and shutdown
