@@ -248,17 +248,6 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
     LOG(INFO) << "group _consumers size is: " << _consumers.size();
 
-    //init _filter_event_ids
-    for (auto& item : ctx->pulsar_info->properties) {
-        if (item.first == "event.ids") {
-            init_filter_event_ids(item.second);
-            LOG(INFO) << "init vector _filter_event_ids. size: " << _filter_event_ids.size();
-            for (auto& event_id : _filter_event_ids) {
-                LOG(INFO) << "_filter_event_ids. event_id: " << event_id;
-            }
-        }
-    }
-
     // start all consumers
     for (auto& consumer : _consumers) {
         if (!_thread_pool.offer([this, consumer, capture0 = &_queue, capture1 = ctx->max_interval_s * 1000,
@@ -298,6 +287,15 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     // copy one
     std::map<std::string, pulsar::MessageId> last_ack_offset = ctx->pulsar_info->ack_offset;
     std::set<std::string> exist_repeated_ack;
+
+    //init _filter_event_ids
+    for (auto& item : ctx->pulsar_info->properties) {
+        if (item.first == "event.ids") {
+            init_filter_event_ids(item.second);
+            LOG(INFO) << "init vector _filter_event_ids. size: " << _filter_event_ids.size()
+                      << ", event ids: " << item.second;
+        }
+    }
 
     //improve performance
     Status (io::PulsarConsumerPipe::*append_data)(const char* data, size_t size);
@@ -554,6 +552,9 @@ std::vector<const char*> PulsarDataConsumerGroup::convert_rows(const char* data)
 }
 
 bool PulsarDataConsumerGroup::is_filter_event_ids(const char* data) {
+    LOG(INFO) << "vector _filter_event_ids. size: " << _filter_event_ids.size()
+              << ", empty: " << _filter_event_ids.empty()
+              << ". consumer group:" << _grp_id;
     if (_filter_event_ids.empty()) {
         return true;
     }
