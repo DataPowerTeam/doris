@@ -552,9 +552,6 @@ std::vector<const char*> PulsarDataConsumerGroup::convert_rows(const char* data)
 }
 
 bool PulsarDataConsumerGroup::is_filter_event_ids(const char* data) {
-    LOG(INFO) << "vector _filter_event_ids. size: " << _filter_event_ids.size()
-              << ", empty: " << _filter_event_ids.empty()
-              << ". consumer group:" << _grp_id;
     if (_filter_event_ids.empty()) {
         return true;
     }
