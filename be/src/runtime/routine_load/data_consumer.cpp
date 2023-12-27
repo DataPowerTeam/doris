@@ -562,14 +562,11 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", grp: " << _grp_id
                           << ", topic name: " << _topic_name;
             }
-            is_filter = is_filter_event_ids(message_str.c_str());
-            if (is_filter) {
-                if (!queue->blocking_put(msg.get())) {
-                    // queue is shutdown
-                    done = true;
-                } else {
-                    ++put_rows;
-                }
+            if (!queue->blocking_put(msg.get())) {
+                // queue is shutdown
+                done = true;
+            } else {
+                ++put_rows;
             }
             ++received_rows;
             msg.release(); // release the ownership, msg will be deleted after being processed
