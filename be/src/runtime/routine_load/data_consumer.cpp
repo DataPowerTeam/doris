@@ -563,7 +563,7 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
             }
             is_filter = is_filter_event_ids(message_str);
             if (is_filter) {
-                f (!queue->blocking_put(msg.get())) {
+                if (!queue->blocking_put(msg.get())) {
                     // queue is shutdown
                     done = true;
                 } else {
