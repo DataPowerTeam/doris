@@ -343,7 +343,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
         pulsar::Message* msg;
         bool res = _queue.blocking_get(&msg);
         if (res) {
-            std::string partition = msg->getTopicName();
+//            std::string partition = msg->getTopicName();
+            std::string partition = msg->getProperty("topicName");
             pulsar::MessageId msg_id = msg->getMessageId();
             std::size_t len = msg->getLength();
 

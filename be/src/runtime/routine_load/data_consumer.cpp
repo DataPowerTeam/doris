@@ -573,7 +573,6 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                 messageBuilder.setProperty("topicName",_topic_name);
                 new_msg = new pulsar::Message(messageBuilder.build());
                 new_msg->setMessageId(msg_id);
-                new_msg->setTopicName(_topic_name);
                 is_filter = is_filter_event_ids(row);
                 if (is_filter) {
                     if (!queue->blocking_put(new_msg)) {
@@ -753,7 +752,7 @@ std::vector<std::string> PulsarDataConsumer::convert_rows(std::string& data) {
     rapidjson::Document source;
     rapidjson::Document destination;
     rapidjson::StringBuffer buffer;
-    if(!source.Parse(data).HasParseError()) {
+    if(!source.Parse(data.c_str()).HasParseError()) {
         if (source.HasMember("events") && source["events"].IsArray()) {
             const rapidjson::Value& array = source["events"];
             size_t len = array.Size();
