@@ -217,7 +217,7 @@ public:
 
     size_t len_of_actual_data(const char* data);
 
-    std::vector<const char*> convert_rows(const char* data);
+    std::vector<std::string> convert_rows(std::string& data);
 
     bool is_filter_event_ids(std::string& data);
 private:

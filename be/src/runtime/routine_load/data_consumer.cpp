@@ -544,6 +544,9 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
         bool is_filter = true;
         bool done = false;
         auto msg = std::make_unique<pulsar::Message>();
+        std::vector<std::string> rows;
+        std::string filter_data;
+        pulsar::Message* new_msg;
         // consume 1 message at a time
         consumer_watch.start();
         pulsar::Result res = _p_consumer.receive(*(msg.get()), 30000 /* timeout, ms */);
@@ -552,8 +555,11 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
         case pulsar::ResultOk:
             msg_id = msg.get()->getMessageId();
             message_str = msg.get()->getDataAsString();
+            _topic_name = msg.get()->getTopicName();
+            //filter invalid prefix of json
+            filter_data = substring_prefix_json(message_str);
+            rows = convert_rows(filter_data);
             if (received_rows == 0) {
-                _topic_name = msg.get()->getTopicName();
                 LOG(INFO) << "receive first pulsar message. "
                           << "len: " << message_str.size()
                           << ", message id: " << msg_id
@@ -561,17 +567,27 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", grp: " << _grp_id
                           << ", topic name: " << _topic_name;
             }
-            is_filter = is_filter_event_ids(message_str);
-            if (is_filter) {
-                if (!queue->blocking_put(msg.get())) {
-                    // queue is shutdown
-                    done = true;
-                } else {
-                    ++put_rows;
+            for (std::string row : rows) {
+                pulsar::MessageBuilder messageBuilder;
+                messageBuilder.setContent(row);
+                messageBuilder.setProperty("topicName",_topic_name);
+                new_msg = new pulsar::Message(messageBuilder.build());
+                new_msg->setMessageId(msg_id);
+                new_msg->setTopicName(_topic_name);
+                is_filter = is_filter_event_ids(row);
+                if (is_filter) {
+                    if (!queue->blocking_put(new_msg)) {
+                        // queue is shutdown
+                        done = true;
+                    } else {
+                        ++put_rows;
+                    }
                 }
             }
             ++received_rows;
+            delete msg.get();
             msg.release(); // release the ownership, msg will be deleted after being processed
+            rows.clear();
             break;
         case pulsar::ResultTimeout:
             // leave the status as OK, because this may happened
@@ -732,8 +748,8 @@ size_t PulsarDataConsumer::len_of_actual_data(const char* data) {
     return length;
 }
 
-std::vector<const char*> PulsarDataConsumer::convert_rows(const char* data) {
-    std::vector<const char*> targets;
+std::vector<std::string> PulsarDataConsumer::convert_rows(std::string& data) {
+    std::vector<std::string> targets;
     rapidjson::Document source;
     rapidjson::Document destination;
     rapidjson::StringBuffer buffer;
@@ -757,23 +773,19 @@ std::vector<const char*> PulsarDataConsumer::convert_rows(const char* data) {
                     }
                 }
 
-                buffer.Clear();
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 destination.Accept(writer);
-
-                size_t buffer_size = buffer.GetSize();
-                char* dest_string = new char[buffer_size + 1];
-                std::memcpy(dest_string, buffer.GetString(), buffer_size);
-                dest_string[buffer_size] = '\0';
+                std::string dest_string(buffer.GetString(), buffer.GetSize());
                 targets.push_back(dest_string);
 
-                destination.RemoveAllMembers();
+                buffer.Clear();
+                destination.Clear();
             }
         } else {
             targets.push_back(data);
         }
     } else {
-        targets.push_back(data);
+        LOG(WARNING) << "Failed to convert rows, pass json: " << data;
     }
     destination.Clear();
     rapidjson::Document().Swap(destination);

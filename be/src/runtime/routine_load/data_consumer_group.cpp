@@ -349,9 +349,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             // avoid repeated ack
             if (exist_repeated_ack.find(partition) == exist_repeated_ack.end()) {
-                if (last_ack_offset.find(partition) != last_ack_offset.end() && last_ack_offset[partition] >= msg_id) {
+                if (last_ack_offset.find(partition) != last_ack_offset.end() && last_ack_offset[partition] > msg_id) {
                     LOG(INFO) << "Pass repeated message id: " << msg_id;
-//                    acknowledge(msg_id, partition);
                     left_time = ctx->max_interval_s * 1000 - watch.elapsed_time() / 1000 / 1000;
                     continue;
                 } else {
@@ -359,37 +358,19 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 }
             }
 
-            //filter invalid prefix of json
-            std::string filter_data = substring_prefix_json(msg->getDataAsString());
-            std::vector<const char*>  rows = convert_rows(filter_data.c_str());
-
             VLOG(3)   << "get pulsar message:" << msg->getDataAsString()
                       << ", partition: " << partition << ", message id: " << msg_id
                       << ", len: " << len << ", size: " << msg->getDataAsString().size();
 
-            Status st;
-            for(const char* row : rows) {
-                bool is_filter = is_filter_event_ids(row);
-                if (!is_filter) {
-                    continue;
-                }
-                size_t row_len = len_of_actual_data(row);
-                st = (pulsar_pipe.get()->*append_data)(row, row_len);
-                if (!st.ok()) {
-                    LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", row =" << row;
-                    break;
-                }
-            }
-
+           Status st = (pulsar_pipe.get()->*append_data)(msg->getDataAsString().c_str(), static_cast<size_t>(len));
            if (st.ok()) {
                received_rows++;
                // len of receive origin message from pulsar
                left_bytes -= len;
-               if (ack_offset[partition] >= msg_id) {
+               if (ack_offset[partition] > msg_id) {
                   LOG(WARNING) << "find repeated message id: " << msg_id;
                }
                ack_offset[partition] = msg_id;
-//               acknowledge(msg_id, partition);
                VLOG(3) << "load message id: " << msg_id;
            } else {
                // failed to append this msg, we must stop
@@ -402,13 +383,6 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                    }
                }
            }
-           // 删除指针指向的内存并清空向量
-           for (auto it = rows.begin(); it != rows.end(); ++it) {
-               delete[] *it;  // 删除指针指向的字符串内存
-           }
-           rows.clear();
-           std::vector<const char*> empty_vector;
-           rows.swap(empty_vector);
            delete msg;
         } else {
             // queue is empty and shutdown
