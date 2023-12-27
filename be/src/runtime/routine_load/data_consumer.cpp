@@ -542,6 +542,7 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
             break;
         }
 
+        bool is_filter = true;
         bool done = false;
         auto msg = std::make_unique<pulsar::Message>();
         // consume 1 message at a time
@@ -561,15 +562,10 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", grp: " << _grp_id
                           << ", topic name: " << _topic_name;
             }
-            bool is_filter = is_filter_event_ids(message_str.c_str());
+            is_filter = is_filter_event_ids(message_str.c_str());
             if (is_filter) {
                 if (!queue->blocking_put(msg.get())) {
                     // queue is shutdown
-//                    LOG(INFO) << "queue is shutdown, failed to blocking put"
-//                              << ", len: " << message_str.size()
-//                              << ", message id: " << msg_id
-//                              << ", pulsar consumer: " << _id
-//                              << ", grp: " << _grp_id;
                     done = true;
                 } else {
                     ++put_rows;
@@ -787,7 +783,7 @@ std::vector<const char*> PulsarDataConsumer::convert_rows(const char* data) {
     return targets;
 }
 
-bool PulsarDataConsumerGroup::is_filter_event_ids(const char* data) {
+bool PulsarDataConsumer::is_filter_event_ids(const char* data) {
     for (const char* event_id : _filter_event_ids) {
         if (strstr(data, event_id) != nullptr) {
             return true;
