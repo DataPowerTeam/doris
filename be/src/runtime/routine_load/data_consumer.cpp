@@ -561,16 +561,19 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", grp: " << _grp_id
                           << ", topic name: " << _topic_name;
             }
-            if (!queue->blocking_put(msg.get())) {
-                // queue is shutdown
-                LOG(INFO) << "queue is shutdown, failed to blocking put"
-                          << ", len: " << message_str.size()
-                          << ", message id: " << msg_id
-                          << ", pulsar consumer: " << _id
-                          << ", grp: " << _grp_id;
-                done = true;
-            } else {
-                ++put_rows;
+            bool is_filter = is_filter_event_ids(message_str.c_str());
+            if (is_filter) {
+                if (!queue->blocking_put(msg.get())) {
+                    // queue is shutdown
+//                    LOG(INFO) << "queue is shutdown, failed to blocking put"
+//                              << ", len: " << message_str.size()
+//                              << ", message id: " << msg_id
+//                              << ", pulsar consumer: " << _id
+//                              << ", grp: " << _grp_id;
+                    done = true;
+                } else {
+                    ++put_rows;
+                }
             }
             ++received_rows;
             msg.release(); // release the ownership, msg will be deleted after being processed
@@ -597,14 +600,6 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
             break;
         }
     }
-
-//    LOG(INFO) << "start do ack of msg_id :" << msg_id;
-//    pulsar::Result ack = _p_consumer.acknowledgeCumulative(msg_id);
-//    if (ack != pulsar::ResultOk) {
-//        LOG(WARNING) << "failed do ack of msg_id :" << msg_id << ", consumer : " << _id;
-//    } else {
-//        LOG(INFO) << "finish do ack of msg_id :" << msg_id << ", consumer : " << _id;
-//    }
 
     LOG(INFO) << "pulsar consume done: " << _id << ", grp: " << _grp_id << ". cancelled: " << _cancelled
               << ", left time(ms): " << left_time << ", total cost(ms): " << watch.elapsed_time() / 1000 / 1000
@@ -790,6 +785,15 @@ std::vector<const char*> PulsarDataConsumer::convert_rows(const char* data) {
     source.Clear();
     rapidjson::Document().Swap(source);
     return targets;
+}
+
+bool PulsarDataConsumerGroup::is_filter_event_ids(const char* data) {
+    for (const char* event_id : _filter_event_ids) {
+        if (strstr(data, event_id) != nullptr) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // end namespace doris

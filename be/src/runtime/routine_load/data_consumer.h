@@ -173,7 +173,10 @@ public:
             : DataConsumer(),
               _service_url(ctx->pulsar_info->service_url),
               _topic(ctx->pulsar_info->topic),
-              _subscription(ctx->pulsar_info->subscription) {}
+              _subscription(ctx->pulsar_info->subscription),
+              _filter_event_ids{"\"010101003\"","\"010106001\"","\"010601002\"","\"011101001\"","\"011360003\"",
+              "\"011410000\"","\"011410004\"","\"012101013\"","\"017401046\"","\"017401057\"","\"017401076\"",
+              "\"020201001\"","\"0102044\"","\"0105002\"","\"0105084\""} {}
 
     ~PulsarDataConsumer() override {
         VLOG(3) << "deconstruct pulsar client";
@@ -215,6 +218,8 @@ public:
     size_t len_of_actual_data(const char* data);
 
     std::vector<const char*> convert_rows(const char* data);
+
+    bool is_filter_event_ids(const char* data);
 private:
     std::string _service_url;
     std::string _topic;
@@ -225,6 +230,7 @@ private:
     pulsar::Client* _p_client = nullptr;
     pulsar::Consumer _p_consumer;
     std::shared_ptr<io::PulsarConsumerPipe> _p_consumer_pipe;
+    std::vector<const char*> _filter_event_ids;
 };
 
 } // end namespace doris
