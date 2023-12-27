@@ -219,7 +219,7 @@ public:
 
     std::vector<const char*> convert_rows(const char* data);
 
-    bool is_filter_event_ids(const char* data);
+    bool is_filter_event_ids(std::string& data);
 private:
     std::string _service_url;
     std::string _topic;
@@ -230,7 +230,7 @@ private:
     pulsar::Client* _p_client = nullptr;
     pulsar::Consumer _p_consumer;
     std::shared_ptr<io::PulsarConsumerPipe> _p_consumer_pipe;
-    std::vector<const char*> _filter_event_ids;
+    std::vector<std::string> _filter_event_ids;
 };
 
 } // end namespace doris

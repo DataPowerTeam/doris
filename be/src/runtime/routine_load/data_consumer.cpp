@@ -541,6 +541,7 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
         if (left_time <= 0) {
             break;
         }
+        bool is_filter = true;
         bool done = false;
         auto msg = std::make_unique<pulsar::Message>();
         // consume 1 message at a time
@@ -560,11 +561,14 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", grp: " << _grp_id
                           << ", topic name: " << _topic_name;
             }
-            if (!queue->blocking_put(msg.get())) {
-                // queue is shutdown
-                done = true;
-            } else {
-                ++put_rows;
+            is_filter = is_filter_event_ids(message_str);
+            if (is_filter) {
+                f (!queue->blocking_put(msg.get())) {
+                    // queue is shutdown
+                    done = true;
+                } else {
+                    ++put_rows;
+                }
             }
             ++received_rows;
             msg.release(); // release the ownership, msg will be deleted after being processed
@@ -778,9 +782,9 @@ std::vector<const char*> PulsarDataConsumer::convert_rows(const char* data) {
     return targets;
 }
 
-bool PulsarDataConsumer::is_filter_event_ids(const char* data) {
-    for (const char* event_id : _filter_event_ids) {
-        if (strstr(data, event_id) != nullptr) {
+bool PulsarDataConsumer::is_filter_event_ids(std::string& data) {
+    for (std::string event_id : _filter_event_ids) {
+        if (data.find(event_id) != std::string::npos) {
             return true;
         }
     }
