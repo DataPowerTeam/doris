@@ -541,8 +541,6 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
         if (left_time <= 0) {
             break;
         }
-
-        bool is_filter = true;
         bool done = false;
         auto msg = std::make_unique<pulsar::Message>();
         // consume 1 message at a time
