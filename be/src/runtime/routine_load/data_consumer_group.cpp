@@ -350,8 +350,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
             // avoid repeated ack
             if (exist_repeated_ack.find(partition) == exist_repeated_ack.end()) {
                 if (last_ack_offset.find(partition) != last_ack_offset.end() && last_ack_offset[partition] >= msg_id) {
-                    LOG(INFO) << "Pass repeated message id: " << msg_id;
-//                    acknowledge(msg_id, partition);
+                    LOG(WARNING) << "Pass repeated message id: " << msg_id;
                     left_time = ctx->max_interval_s * 1000 - watch.elapsed_time() / 1000 / 1000;
                     continue;
                 } else {
@@ -361,20 +360,20 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             //filter invalid prefix of json
             std::string filter_data = substring_prefix_json(msg->getDataAsString());
-            std::vector<const char*>  rows = convert_rows(filter_data.c_str());
+            std::vector<std::string>  rows = convert_rows(filter_data.c_str());
 
             VLOG(3)   << "get pulsar message:" << msg->getDataAsString()
                       << ", partition: " << partition << ", message id: " << msg_id
                       << ", len: " << len << ", size: " << msg->getDataAsString().size();
 
             Status st;
-            for(const char* row : rows) {
+            for(std::string row : rows) {
                 bool is_filter = is_filter_event_ids(row);
                 if (!is_filter) {
                     continue;
                 }
-                size_t row_len = len_of_actual_data(row);
-                st = (pulsar_pipe.get()->*append_data)(row, row_len);
+                size_t row_len = row.size();
+                st = (pulsar_pipe.get()->*append_data)(row.c_str(), row_len);
                 if (!st.ok()) {
                     LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", row =" << row;
                     break;
@@ -389,7 +388,6 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                   LOG(WARNING) << "find repeated message id: " << msg_id;
                }
                ack_offset[partition] = msg_id;
-//               acknowledge(msg_id, partition);
                VLOG(3) << "load message id: " << msg_id;
            } else {
                // failed to append this msg, we must stop
@@ -402,13 +400,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                    }
                }
            }
-           // 删除指针指向的内存并清空向量
-           for (auto it = rows.begin(); it != rows.end(); ++it) {
-               delete[] *it;  // 删除指针指向的字符串内存
-           }
            rows.clear();
-           std::vector<const char*> empty_vector;
-           rows.swap(empty_vector);
            delete msg;
         } else {
             // queue is empty and shutdown
@@ -489,12 +481,12 @@ size_t PulsarDataConsumerGroup::len_of_actual_data(const char* data) {
     return length;
 }
 
-std::vector<const char*> PulsarDataConsumerGroup::convert_rows(const char* data) {
-    std::vector<const char*> targets;
+std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data) {
+    std::vector<std::string> targets;
     rapidjson::Document source;
     rapidjson::Document destination;
     rapidjson::StringBuffer buffer;
-    if(!source.Parse(data).HasParseError()) {
+    if(!source.Parse(data.c_str()).HasParseError()) {
         if (source.HasMember("events") && source["events"].IsArray()) {
             const rapidjson::Value& array = source["events"];
             size_t len = array.Size();
@@ -516,11 +508,7 @@ std::vector<const char*> PulsarDataConsumerGroup::convert_rows(const char* data)
 
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 destination.Accept(writer);
-
-                size_t buffer_size = buffer.GetSize();
-                char* dest_string = new char[buffer_size + 1];
-                std::memcpy(dest_string, buffer.GetString(), buffer_size);
-                dest_string[buffer_size] = '\0';
+                std::string dest_string(buffer.GetString(), buffer.GetSize());
                 targets.push_back(dest_string);
 
                 buffer.Clear();
