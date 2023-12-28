@@ -272,6 +272,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     // consuming from queue and put data to stream load pipe
     int64_t left_time = ctx->max_interval_s * 1000;
     int64_t received_rows = 0;
+    int64_t put_rows = 0;
     int64_t left_bytes = ctx->max_batch_size;
 
     std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe = std::static_pointer_cast<io::PulsarConsumerPipe>(ctx->body_sink);
@@ -300,7 +301,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
         if (eos || left_time <= 0 || left_bytes <= 0) {
             LOG(INFO) << "consumer group done: " << _grp_id
                       << ". consume time(ms)=" << ctx->max_interval_s * 1000 - left_time
-                      << ", received rows=" << received_rows << ", received bytes=" << ctx->max_batch_size - left_bytes
+                      << ", received rows=" << received_rows << ", put rows=" << put_rows
+                      << ", received bytes=" << ctx->max_batch_size - left_bytes
                       << ", eos: " << eos << ", left_time: " << left_time << ", left_bytes: " << left_bytes
                       << ", blocking get time(us): " << _queue.total_get_wait_time() / 1000
                       << ", blocking put time(us): " << _queue.total_put_wait_time() / 1000;
@@ -377,13 +379,16 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 if (!st.ok()) {
                     LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", row =" << row;
                     break;
+                } else {
+                    put_rows++;
+                    left_bytes -= len;
                 }
             }
 
            if (st.ok()) {
                received_rows++;
                // len of receive origin message from pulsar
-               left_bytes -= len;
+//               left_bytes -= len;
                if (ack_offset[partition] >= msg_id) {
                   LOG(WARNING) << "find repeated message id: " << msg_id;
                }
