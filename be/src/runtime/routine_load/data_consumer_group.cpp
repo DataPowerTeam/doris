@@ -381,7 +381,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                     break;
                 } else {
                     put_rows++;
-                    left_bytes -= len;
+                    left_bytes -= row_len;
                 }
             }
 
