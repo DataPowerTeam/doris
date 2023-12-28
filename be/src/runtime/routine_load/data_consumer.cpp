@@ -570,6 +570,8 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                 } else {
                     ++put_rows;
                 }
+            } else {
+                delete msg.get();
             }
             ++received_rows;
             msg.release(); // release the ownership, msg will be deleted after being processed
