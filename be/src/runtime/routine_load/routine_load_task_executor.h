@@ -68,10 +68,6 @@ public:
 
    Status get_pulsar_partition_backlog(const PPulsarBacklogProxyRequest& request, std::vector<int64_t>* backlog_num);
 
-   static void copy_to_ack_map(std::map<std::string, pulsar::MessageId> &map);
-
-   static void copy_from_ack_map(std::map<std::string, pulsar::MessageId> &map);
-
 private:
     // execute the task
     void exec_task(std::shared_ptr<StreamLoadContext> ctx, DataConsumerPool* pool,
@@ -85,10 +81,6 @@ private:
     // create a dummy StreamLoadContext for PKafkaMetaProxyRequest
     Status _prepare_ctx(const PKafkaMetaProxyRequest& request,
                         std::shared_ptr<StreamLoadContext> ctx);
-
-public:
-    static std::map<std::string, std::unique_ptr<pulsar::MessageId>> _last_ack_offset;
-    static std::mutex _ack_mutex;
 
 private:
     ExecEnv* _exec_env;

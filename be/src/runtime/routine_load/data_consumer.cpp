@@ -493,6 +493,7 @@ Status PulsarDataConsumer::assign_partition(const std::string& partition, std::s
     conf.setConsumerType(pulsar::ConsumerExclusive);
     conf.setAckGroupingTimeMs(0); // 设置累积确认立即同步
     conf.setAckGroupingMaxSize(0);
+    conf.setBatchIndexAckEnabled(true); // 设置为 true 启用 Batch Index Level 确认
 
     pulsar::Result result;
     result = _p_client->subscribe(partition, _subscription, conf, _p_consumer);

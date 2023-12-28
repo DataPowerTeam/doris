@@ -279,11 +279,10 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     LOG(INFO) << "start consumer group: " << _grp_id << ". max time(ms): " << left_time
               << ", batch size: " << left_bytes << ". " << ctx->brief();
 
-    std::map<std::string, pulsar::MessageId> ack_offset;
+    std::map<std::string, pulsar::MessageId> last_ack_offset
 
     // copy one
-    std::map<std::string, pulsar::MessageId> last_ack_offset = ctx->pulsar_info->ack_offset;
-    std::set<std::string> exist_repeated_ack;
+    std::map<std::string, pulsar::MessageId> ack_offset = ctx->pulsar_info->ack_offset;
 
     //improve performance
     Status (io::PulsarConsumerPipe::*append_data)(const char* data, size_t size);
@@ -296,12 +295,19 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     MonotonicStopWatch watch;
     watch.start();
     bool eos = false;
+    bool end = false;
+    bool done = false;
     while (true) {
-        if (eos || left_time <= 0 || left_bytes <= 0) {
+        if (left_time <= 0 || left_bytes <= 0) {
+            end = true;
+        }
+        if (eos || done) {
+            last_ack_offset.clear();
             LOG(INFO) << "consumer group done: " << _grp_id
                       << ". consume time(ms)=" << ctx->max_interval_s * 1000 - left_time
                       << ", received rows=" << received_rows << ", received bytes=" << ctx->max_batch_size - left_bytes
-                      << ", eos: " << eos << ", left_time: " << left_time << ", left_bytes: " << left_bytes
+                      << ", eos: " << eos << ", end: " << end << ", done: " << done
+                      << ", left_time: " << left_time << ", left_bytes: " << left_bytes
                       << ", blocking get time(us): " << _queue.total_get_wait_time() / 1000
                       << ", blocking put time(us): " << _queue.total_put_wait_time() / 1000;
 
@@ -335,7 +341,6 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 ctx->pulsar_info->ack_offset = std::move(ack_offset);
                 ctx->receive_bytes = ctx->max_batch_size - left_bytes;
                 get_backlog_nums(ctx);
-//                acknowledge_cumulative(ctx);
                 return Status::OK();
             }
         }
@@ -343,19 +348,20 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
         pulsar::Message* msg;
         bool res = _queue.blocking_get(&msg);
         if (res) {
-//            std::string partition = msg->getTopicName();
             std::string partition = msg->getProperty("topicName");
             pulsar::MessageId msg_id = msg->getMessageId();
             std::size_t len = msg->getLength();
 
-            // avoid repeated ack
-            if (exist_repeated_ack.find(partition) == exist_repeated_ack.end()) {
-                if (last_ack_offset.find(partition) != last_ack_offset.end() && last_ack_offset[partition] > msg_id) {
-                    LOG(INFO) << "Pass repeated message id: " << msg_id;
-                    left_time = ctx->max_interval_s * 1000 - watch.elapsed_time() / 1000 / 1000;
+            if (end) {
+                if (last_ack_offset.size() >= ack_offset.size()) {
+                    done = true;
+                    delete msg;
                     continue;
-                } else {
-                    exist_repeated_ack.insert(partition);
+                }
+                if (msg_id > ack_offset[partition]) {
+                    last_ack_offset[partition] = msg_id;
+                    delete msg;
+                    continue;
                 }
             }
 
@@ -392,8 +398,6 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
         left_time = ctx->max_interval_s * 1000 - watch.elapsed_time() / 1000 / 1000;
     }
-
-    exist_repeated_ack.clear();
 
     return Status::OK();
 }
@@ -464,63 +468,5 @@ size_t PulsarDataConsumerGroup::len_of_actual_data(const char* data) {
     return length;
 }
 
-std::vector<const char*> PulsarDataConsumerGroup::convert_rows(const char* data) {
-    std::vector<const char*> targets;
-    rapidjson::Document source;
-    rapidjson::Document destination;
-    rapidjson::StringBuffer buffer;
-    if(!source.Parse(data).HasParseError()) {
-        if (source.HasMember("events") && source["events"].IsArray()) {
-            const rapidjson::Value& array = source["events"];
-            size_t len = array.Size();
-            for(size_t i = 0; i < len; i++) {
-                destination.SetObject();
-                for (auto& member : source.GetObject()) {
-                    const char* key = member.name.GetString();
-                    if (std::strcmp(key, "events") != 0) {
-                        rapidjson::Value keyName(key, destination.GetAllocator());
-                        rapidjson::Value sourceValue(rapidjson::kObjectType);
-                        sourceValue.CopyFrom(source[key], destination.GetAllocator());
-                        destination.AddMember(keyName, sourceValue, destination.GetAllocator());
-                    } else {
-                        rapidjson::Value& object = const_cast<rapidjson::Value&>(array[i]);
-                        rapidjson::Value eventName("event", destination.GetAllocator());
-                        destination.AddMember(eventName, object, destination.GetAllocator());
-                    }
-                }
-
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                destination.Accept(writer);
-
-                size_t buffer_size = buffer.GetSize();
-                char* dest_string = new char[buffer_size + 1];
-                std::memcpy(dest_string, buffer.GetString(), buffer_size);
-                dest_string[buffer_size] = '\0';
-                targets.push_back(dest_string);
-
-                buffer.Clear();
-                destination.Clear();
-            }
-        } else {
-            targets.push_back(data);
-        }
-    } else {
-        LOG(WARNING) << "Failed to convert rows, pass json: " << data;
-    }
-    destination.Clear();
-    rapidjson::Document().Swap(destination);
-    source.Clear();
-    rapidjson::Document().Swap(source);
-    return targets;
-}
-
-bool PulsarDataConsumerGroup::is_filter_event_ids(const char* data) {
-    for (const char* event_id : _filter_event_ids) {
-        if (strstr(data, event_id) != nullptr) {
-            return true;
-        }
-    }
-    return false;
-}
 
 } // namespace doris
