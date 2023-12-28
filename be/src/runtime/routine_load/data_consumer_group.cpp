@@ -362,7 +362,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             //filter invalid prefix of json
             std::string filter_data = substring_prefix_json(msg->getDataAsString());
-            std::vector<std::string>  rows = convert_rows(filter_data.c_str());
+            std::vector<std::string>  rows = convert_rows(filter_data);
 
             VLOG(3)   << "get pulsar message:" << msg->getDataAsString()
                       << ", partition: " << partition << ", message id: " << msg_id
@@ -532,9 +532,9 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
     return targets;
 }
 
-bool PulsarDataConsumerGroup::is_filter_event_ids(const char* data) {
-    for (const char* event_id : _filter_event_ids) {
-        if (strstr(data, event_id) != nullptr) {
+bool PulsarDataConsumerGroup::is_filter_event_ids(std::string& data) {
+    for (std::string event_id : _filter_event_ids) {
+        if (data.find(event_id) != std::string::npos) {
             return true;
         }
     }

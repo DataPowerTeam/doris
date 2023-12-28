@@ -137,7 +137,7 @@ private:
     // acknowledge pulsar message
     void acknowledge(pulsar::MessageId& message_id, std::string partition);
 
-    bool is_filter_event_ids(const char* data);
+    bool is_filter_event_ids(std::string& data);
 
 private:
     // blocking queue to receive msgs from all consumers
