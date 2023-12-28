@@ -568,13 +568,13 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", topic name: " << _topic_name;
             }
             for (std::string row : rows) {
-                pulsar::MessageBuilder messageBuilder;
-                messageBuilder.setContent(row);
-                messageBuilder.setProperty("topicName",_topic_name);
-                new_msg = new pulsar::Message(messageBuilder.build());
-                new_msg->setMessageId(msg_id);
                 is_filter = is_filter_event_ids(row);
                 if (is_filter) {
+                    pulsar::MessageBuilder messageBuilder;
+                    messageBuilder.setContent(row);
+                    messageBuilder.setProperty("topicName",_topic_name);
+                    new_msg = new pulsar::Message(messageBuilder.build());
+                    new_msg->setMessageId(msg_id);
                     if (!queue->blocking_put(new_msg)) {
                         // queue is shutdown
                         done = true;
