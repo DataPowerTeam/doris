@@ -279,7 +279,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     LOG(INFO) << "start consumer group: " << _grp_id << ". max time(ms): " << left_time
               << ", batch size: " << left_bytes << ". " << ctx->brief();
 
-    std::map<std::string, pulsar::MessageId> last_ack_offset
+    std::map<std::string, pulsar::MessageId> last_ack_offset;
 
     // copy one
     std::map<std::string, pulsar::MessageId> ack_offset = ctx->pulsar_info->ack_offset;
