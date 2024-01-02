@@ -404,7 +404,7 @@ public class OlapTableSink extends DataSink {
         for (Long partitionId : partitionIds) {
             Partition partition = table.getPartition(partitionId);
             int quorum =
-                (table.getPartitionInfo().getReplicaAllocation(partition.getId()).getTotalReplicaNum() - 1) / 2 + 1;
+                    (table.getPartitionInfo().getReplicaAllocation(partition.getId()).getTotalReplicaNum() - 1) / 2 + 1;
             for (MaterializedIndex index : partition.getMaterializedIndices(IndexExtState.ALL)) {
                 // we should ensure the replica backend is alive
                 // otherwise, there will be a 'unknown node id, id=xxx' error for stream load
