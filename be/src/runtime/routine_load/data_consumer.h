@@ -213,12 +213,6 @@ public:
 
     const std::string& get_partition();
 
-    std::string substring_prefix_json(std::string data);
-
-    size_t len_of_actual_data(const char* data);
-
-    std::vector<const char*> convert_rows(const char* data);
-
     bool is_filter_event_ids(std::string& data);
 private:
     std::string _service_url;

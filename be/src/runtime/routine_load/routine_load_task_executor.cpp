@@ -62,9 +62,6 @@ using namespace ErrorCode;
 
 DEFINE_GAUGE_METRIC_PROTOTYPE_2ARG(routine_load_task_count, MetricUnit::NOUNIT);
 
-std::map<std::string, std::unique_ptr<pulsar::MessageId>> RoutineLoadTaskExecutor::_last_ack_offset;
-std::mutex RoutineLoadTaskExecutor::_ack_mutex;
-
 RoutineLoadTaskExecutor::RoutineLoadTaskExecutor(ExecEnv* exec_env)
         : _exec_env(exec_env),
           _thread_pool(config::routine_load_thread_pool_size, config::routine_load_thread_pool_size,
@@ -330,10 +327,6 @@ Status RoutineLoadTaskExecutor::submit_task(const TRoutineLoadTask& task) {
         break;
     case TLoadSourceType::PULSAR:
         ctx->pulsar_info.reset(new PulsarLoadInfo(task.pulsar_load_info));
-        RoutineLoadTaskExecutor::copy_from_ack_map(ctx->pulsar_info->ack_offset);
-//        for (auto& kv : ctx->pulsar_info->ack_offset) {
-//            LOG(INFO) << "init pulsar_info ack_offset :" << kv.second << ", partition: " << kv.first;
-//        }
         break;
     default:
         LOG(WARNING) << "unknown load source type: " << task.type;
@@ -507,10 +500,6 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        RoutineLoadTaskExecutor::copy_to_ack_map(ctx->pulsar_info->ack_offset);
-        for (auto& kv : ctx->pulsar_info->ack_offset) {
-            LOG(INFO) << "_last_ack_offset should be ack  :" << kv.second << ", partition: " << kv.first;
-        }
         //do ack
         Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)->acknowledge_cumulative(ctx);
         if (!st.ok()) {
@@ -576,23 +565,6 @@ Status RoutineLoadTaskExecutor::_execute_plan_for_test(std::shared_ptr<StreamLoa
     std::thread t1(mock_consumer);
     t1.detach();
     return Status::OK();
-}
-
-void RoutineLoadTaskExecutor::copy_to_ack_map(std::map<std::string, pulsar::MessageId> &map) {
-    std::lock_guard<std::mutex> lock(RoutineLoadTaskExecutor::_ack_mutex);
-    for (auto& kv : map) {
-        RoutineLoadTaskExecutor::_last_ack_offset.erase(kv.first);
-        RoutineLoadTaskExecutor::_last_ack_offset[kv.first] = std::make_unique<pulsar::MessageId>(kv.second);
-    }
-}
-
-void RoutineLoadTaskExecutor::copy_from_ack_map(std::map<std::string, pulsar::MessageId> &map) {
-    std::lock_guard<std::mutex> lock(RoutineLoadTaskExecutor::_ack_mutex);
-    if (!RoutineLoadTaskExecutor::_last_ack_offset.empty()) {
-        for (auto& kv : RoutineLoadTaskExecutor::_last_ack_offset) {
-            map[kv.first] = *kv.second;
-        }
-    }
 }
 
 } // namespace doris
