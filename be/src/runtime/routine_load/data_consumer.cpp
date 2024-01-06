@@ -722,7 +722,7 @@ bool PulsarDataConsumer::match(std::shared_ptr<StreamLoadContext> ctx) {
 bool PulsarDataConsumer::is_filter_event_ids(const std::string& data,
                                              const std::vector<std::string>& filter_event_ids) {
     if (filter_event_ids.empty()) {
-        return false;
+        return true;
     }
     for (std::string event_id : filter_event_ids) {
         if (data.find(event_id) != std::string::npos) {
