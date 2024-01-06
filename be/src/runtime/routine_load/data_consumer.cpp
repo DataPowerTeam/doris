@@ -518,10 +518,14 @@ Status PulsarDataConsumer::assign_partition(const std::string& partition, std::s
     return Status::OK();
 }
 
-Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms) {
+Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
+                                         std::vector<std::string>& filter_event_ids
+                                         int64_t max_running_time_ms) {
     _last_visit_time = time(nullptr);
     int64_t left_time = max_running_time_ms;
-    LOG(INFO) << "start pulsar consumer: " << _id << ", grp: " << _grp_id << ", max running time(ms): " << left_time;
+    LOG(INFO) << "start pulsar consumer: " << _id << ", grp: " << _grp_id
+              << ",filter_event_ids size: " << filter_event_ids.size()
+              << ", max running time(ms): " << left_time;
 
     int64_t received_rows = 0;
     int64_t put_rows = 0;
@@ -562,7 +566,7 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", grp: " << _grp_id
                           << ", topic name: " << _topic_name;
             }
-            is_filter = is_filter_event_ids(message_str);
+            is_filter = is_filter_event_ids(message_str, filter_event_ids);
             if (is_filter) {
                 if (!queue->blocking_put(msg.get())) {
                     // queue is shutdown
@@ -715,8 +719,12 @@ bool PulsarDataConsumer::match(std::shared_ptr<StreamLoadContext> ctx) {
     return true;
 }
 
-bool PulsarDataConsumer::is_filter_event_ids(std::string& data) {
-    for (std::string event_id : _filter_event_ids) {
+bool PulsarDataConsumer::is_filter_event_ids(const std::string& data,
+                                             const std::vector<std::string>& filter_event_ids) {
+    if (filter_event_ids.empty()) {
+        return false;
+    }
+    for (const std::string event_id : filter_event_ids) {
         if (data.find(event_id) != std::string::npos) {
             return true;
         }

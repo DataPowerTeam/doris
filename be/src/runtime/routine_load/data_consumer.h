@@ -173,10 +173,7 @@ public:
             : DataConsumer(),
               _service_url(ctx->pulsar_info->service_url),
               _topic(ctx->pulsar_info->topic),
-              _subscription(ctx->pulsar_info->subscription),
-              _filter_event_ids{"\"010101003\"","\"010106001\"","\"010601002\"","\"011101001\"","\"011360003\"",
-              "\"011410000\"","\"011410004\"","\"012101013\"","\"017401046\"","\"017401057\"","\"017401076\"",
-              "\"020201001\"","\"0102044\"","\"0105002\"","\"0105084\""} {}
+              _subscription(ctx->pulsar_info->subscription) {}
 
     ~PulsarDataConsumer() override {
         VLOG(3) << "deconstruct pulsar client";
@@ -203,7 +200,7 @@ public:
     Status acknowledge(pulsar::MessageId& message_id, std::string partition);
 
     // start the consumer and put msgs to queue
-    Status group_consume(BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms);
+    Status group_consume(BlockingQueue<pulsar::Message*>* queue, std::vector<std::string> filter_event_ids, int64_t max_running_time_ms);
 
     // get the partitions of the topic
     Status get_topic_partition(std::vector<std::string>* partitions);
@@ -213,7 +210,7 @@ public:
 
     const std::string& get_partition();
 
-    bool is_filter_event_ids(std::string& data);
+    bool is_filter_event_ids(const std::string& data, const std::vector<std::string>& filter_event_ids);
 private:
     std::string _service_url;
     std::string _topic;
@@ -224,7 +221,6 @@ private:
     pulsar::Client* _p_client = nullptr;
     pulsar::Consumer _p_consumer;
     std::shared_ptr<io::PulsarConsumerPipe> _p_consumer_pipe;
-    std::vector<std::string> _filter_event_ids;
 };
 
 } // end namespace doris

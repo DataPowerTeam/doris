@@ -24,6 +24,7 @@
 #include <string>
 #include <utility>
 #include <chrono> // IWYU pragma: keep
+#include <sstream>
 
 #include "common/logging.h"
 #include "librdkafka/rdkafkacpp.h"
@@ -244,12 +245,14 @@ PulsarDataConsumerGroup::~PulsarDataConsumerGroup() {
 Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx) {
     Status result_st = Status::OK();
 
-    LOG(INFO) << "group _consumers size is: " << _consumers.size();
+    std::vector<std::string> filter_event_ids = parse_event_ids_vector(ctx);
+    LOG(INFO) << "group _consumers size is: " << _consumers.size()
+              << "filter_event_ids size is: " << filter_event_ids.size();
 
     // start all consumers
     for (auto& consumer : _consumers) {
         if (!_thread_pool.offer([this, consumer, capture0 = &_queue, capture1 = ctx->max_interval_s * 1000,
-                capture2 = [this, &result_st](const Status& st) {
+                capture2 = filter_event_ids, capture3 = [this, &result_st](const Status& st) {
                  std::unique_lock<std::mutex> lock(_mutex);
                  _counter--;
                  VLOG(1) << "group counter is: " << _counter << ", grp: " << _grp_id;
@@ -261,7 +264,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                  if (result_st.ok() && !st.ok()) {
                      result_st = st;
                  }
-                }] { actual_consume(consumer, capture0, capture1, capture2); })) {
+                }] { actual_consume(consumer, capture0, capture1, capture2, capture3); })) {
             LOG(WARNING) << "failed to submit data consumer: " << consumer->id() << ", group id: " << _grp_id;
             return Status::InternalError("failed to submit data consumer");
         } else {
@@ -334,7 +337,6 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 ctx->pulsar_info->ack_offset = std::move(ack_offset);
                 ctx->receive_bytes = ctx->max_batch_size - left_bytes;
                 get_backlog_nums(ctx);
-//                acknowledge_cumulative(ctx);
                 return Status::OK();
             }
         }
@@ -356,7 +358,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             Status st;
             for(std::string row : rows) {
-                bool is_filter = is_filter_event_ids(row);
+                bool is_filter = is_filter_event_ids(row, filter_event_ids);
                 if (!is_filter) {
                     continue;
                 }
@@ -405,8 +407,9 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
 void PulsarDataConsumerGroup::actual_consume(const std::shared_ptr<DataConsumer>& consumer,
                                              BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms,
+                                             std::vector<std::string> filter_event_ids,
                                              const ConsumeFinishCallback& cb) {
-    Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->group_consume(queue, max_running_time_ms);
+    Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->group_consume(queue, filter_event_ids, max_running_time_ms);
     cb(st);
 }
 
@@ -515,13 +518,31 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
     return targets;
 }
 
-bool PulsarDataConsumerGroup::is_filter_event_ids(std::string& data) {
-    for (std::string event_id : _filter_event_ids) {
+bool PulsarDataConsumerGroup::is_filter_event_ids(const std::string& data,
+                                                  const std::vector<std::string>& filter_event_ids) {
+    if (filter_event_ids.empty()) {
+        return false;
+    }
+    for (const std::string event_id : filter_event_ids) {
         if (data.find(event_id) != std::string::npos) {
             return true;
         }
     }
     return false;
+}
+
+std::vector<std::string> PulsarDataConsumerGroup::parse_event_ids_vector(std::shared_ptr<StreamLoadContext> ctx) {
+    std::vector<std::string> tokens;
+    for (auto& item : ctx->pulsar_info->properties) {
+        if (item.first == "event.ids") {
+            std::stringstream ss(item.second);
+            std::string token;
+            while (std::getline(ss, token, ',')) {
+                tokens.push_back(token);
+            }
+        }
+    }
+    return tokens;
 }
 
 } // namespace doris

@@ -107,10 +107,7 @@ private:
 // for pulsar
 class PulsarDataConsumerGroup : public DataConsumerGroup {
 public:
-    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(1000),
-    _filter_event_ids{"\"010101003\"","\"010106001\"","\"010601002\"","\"011101001\"","\"011360003\"","\"011410000\"",
-    "\"011410004\"","\"012101013\"","\"017401046\"","\"017401057\"","\"017401076\"","\"020201001\"","\"0102044\"",
-    "\"0105002\"","\"0105084\""} {}
+    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(1000) {}
 
     ~PulsarDataConsumerGroup() override;
 
@@ -124,7 +121,7 @@ public:
 private:
     // start a single consumer
     void actual_consume(const std::shared_ptr<DataConsumer>& consumer, BlockingQueue<pulsar::Message*>* queue,
-                        int64_t max_running_time_ms, const ConsumeFinishCallback& cb);
+                        int64_t max_running_time_ms, std::vector<std::string> list, const ConsumeFinishCallback& cb);
 
     void get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx);
 
@@ -137,13 +134,12 @@ private:
     // acknowledge pulsar message
     void acknowledge(pulsar::MessageId& message_id, std::string partition);
 
-    bool is_filter_event_ids(std::string& data);
+    bool is_filter_event_ids(const std::string& data, const std::vector<std::string>& filter_event_ids);
 
 private:
     // blocking queue to receive msgs from all consumers
     BlockingQueue<pulsar::Message*> _queue;
 
-    std::vector<const char*> _filter_event_ids;
 };
 
 } // end namespace doris
