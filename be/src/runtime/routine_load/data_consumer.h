@@ -187,7 +187,9 @@ public:
     enum InitialPosition { LATEST, EARLIEST };
 
     Status init(std::shared_ptr<StreamLoadContext> ctx) override;
-    Status assign_partition(const std::string& partition, std::shared_ptr<StreamLoadContext> ctx, int64_t initial_position = -1);
+    Status assign_partition(const std::string& partition,
+                            std::shared_ptr<StreamLoadContext> ctx,
+                            int64_t initial_position = -1);
     // TODO(cmy): currently do not implement single consumer start method, using group_consume
     Status consume(std::shared_ptr<StreamLoadContext> ctx) override { return Status::OK(); }
     Status cancel(std::shared_ptr<StreamLoadContext> ctx) override;
@@ -200,7 +202,9 @@ public:
     Status acknowledge(pulsar::MessageId& message_id, std::string partition);
 
     // start the consumer and put msgs to queue
-    Status group_consume(BlockingQueue<pulsar::Message*>* queue, std::vector<std::string> filter_event_ids, int64_t max_running_time_ms);
+    Status group_consume(BlockingQueue<pulsar::Message*>* queue,
+                         std::vector<std::string> filter_event_ids,
+                         int64_t max_running_time_ms);
 
     // get the partitions of the topic
     Status get_topic_partition(std::vector<std::string>* partitions);

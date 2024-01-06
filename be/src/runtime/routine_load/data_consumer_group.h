@@ -136,6 +136,8 @@ private:
 
     bool is_filter_event_ids(const std::string& data, const std::vector<std::string>& filter_event_ids);
 
+    std::vector<std::string> parse_event_ids_vector(std::shared_ptr<StreamLoadContext> ctx);
+
 private:
     // blocking queue to receive msgs from all consumers
     BlockingQueue<pulsar::Message*> _queue;
