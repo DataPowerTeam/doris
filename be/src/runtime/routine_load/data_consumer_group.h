@@ -121,7 +121,8 @@ public:
 private:
     // start a single consumer
     void actual_consume(const std::shared_ptr<DataConsumer>& consumer, BlockingQueue<pulsar::Message*>* queue,
-                        int64_t max_running_time_ms, std::vector<std::string> list, const ConsumeFinishCallback& cb);
+                        int64_t max_running_time_ms, std::vector<std::string> filter_event_ids,
+                        const ConsumeFinishCallback& cb);
 
     void get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx);
 
