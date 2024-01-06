@@ -523,7 +523,7 @@ bool PulsarDataConsumerGroup::is_filter_event_ids(const std::string& data,
     if (filter_event_ids.empty()) {
         return false;
     }
-    for (const std::string event_id : filter_event_ids) {
+    for (std::string event_id : filter_event_ids) {
         if (data.find(event_id) != std::string::npos) {
             return true;
         }
