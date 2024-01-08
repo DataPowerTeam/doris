@@ -143,7 +143,6 @@ private:
 private:
     // blocking queue to receive msgs from all consumers
     BlockingQueue<pulsar::Message*> _queue;
-
 };
 
 } // end namespace doris

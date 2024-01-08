@@ -266,7 +266,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                          if (result_st.ok() && !st.ok()) {
                              result_st = st;
                          }
-                    }] { actual_consume(consumer, capture0, capture1, capture2, capture3); })) {
+                     }] { actual_consume(consumer, capture0, capture1, capture2, capture3); })) {
             LOG(WARNING) << "failed to submit data consumer: " << consumer->id()
                          << ", group id: " << _grp_id;
             return Status::InternalError("failed to submit data consumer");
@@ -382,13 +382,14 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 received_rows++;
                 // len of receive origin message from pulsar
                 if (ack_offset[partition] >= msg_id) {
-                   LOG(WARNING) << "find repeated message id: " << msg_id;
+                    LOG(WARNING) << "find repeated message id: " << msg_id;
                 }
                 ack_offset[partition] = msg_id;
                 VLOG(3) << "load message id: " << msg_id;
             } else {
                 // failed to append this msg, we must stop
-                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg=" << st.to_string();
+                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg="
+                             << st.to_string();
                 eos = true;
                 {
                     std::unique_lock<std::mutex> lock(_mutex);

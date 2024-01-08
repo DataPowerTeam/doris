@@ -64,11 +64,11 @@ public:
     Status get_kafka_latest_offsets_for_partitions(const PKafkaMetaProxyRequest& request,
                                                    std::vector<PIntegerPair>* partition_offsets);
 
-   Status get_pulsar_partition_meta(const PPulsarMetaProxyRequest& request,
-                                    std::vector<std::string>* partitions);
+    Status get_pulsar_partition_meta(const PPulsarMetaProxyRequest& request,
+                                     std::vector<std::string>* partitions);
 
-   Status get_pulsar_partition_backlog(const PPulsarBacklogProxyRequest& request,
-                                       std::vector<int64_t>* backlog_num);
+    Status get_pulsar_partition_backlog(const PPulsarBacklogProxyRequest& request,
+                                        std::vector<int64_t>* backlog_num);
 
 private:
     // execute the task

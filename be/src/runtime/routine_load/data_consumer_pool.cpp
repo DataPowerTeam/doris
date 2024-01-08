@@ -31,11 +31,11 @@
 #include "common/config.h"
 #include "common/logging.h"
 #include "common/status.h"
+#include "data_consumer.h"
 #include "runtime/routine_load/data_consumer.h"
 #include "runtime/routine_load/data_consumer_group.h"
 #include "runtime/stream_load/stream_load_context.h"
 #include "util/uid_util.h"
-#include "data_consumer.h"
 
 namespace doris {
 
@@ -120,10 +120,10 @@ Status DataConsumerPool::get_consumer_grp(std::shared_ptr<StreamLoadContext> ctx
         // so one consumer can only subscribe one topic/partition
         int max_consumer_num = config::max_pulsar_consumer_num_per_group;
         if (max_consumer_num < ctx->pulsar_info->partitions.size()) {
-          return Status::InternalError(
-                  "PAUSE: Partition num is more than max consumer num in one data consumer group "
-                  "on some BEs, please increase max_pulsar_consumer_num_per_group from "
-                  "BE side or just add more BEs");
+            return Status::InternalError(
+                    "PAUSE: Partition num is more than max consumer num in one data consumer group "
+                    "on some BEs, please increase max_pulsar_consumer_num_per_group from "
+                    "BE side or just add more BEs");
         }
         size_t consumer_num = ctx->pulsar_info->partitions.size();
 

@@ -214,6 +214,7 @@ public:
 
     bool is_filter_event_ids(const std::string& data,
                              const std::vector<std::string>& filter_event_ids);
+
 private:
     std::string _service_url;
     std::string _topic;
