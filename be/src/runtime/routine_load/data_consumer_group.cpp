@@ -388,8 +388,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 VLOG(3) << "load message id: " << msg_id;
             } else {
                 // failed to append this msg, we must stop
-                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg="
-                             << st.to_string();
+                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id
+                             << ", errmsg=" << st.to_string();
                 eos = true;
                 {
                     std::unique_lock<std::mutex> lock(_mutex);
