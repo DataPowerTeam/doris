@@ -479,7 +479,8 @@ Status PulsarDataConsumer::init(std::shared_ptr<StreamLoadContext> ctx) {
     return Status::OK();
 }
 
-Status PulsarDataConsumer::assign_partition(const std::string& partition, std::shared_ptr<StreamLoadContext> ctx,
+Status PulsarDataConsumer::assign_partition(const std::string& partition,
+                                            std::shared_ptr<StreamLoadContext> ctx,
                                             int64_t initial_position) {
     DCHECK(_p_client);
 
@@ -498,18 +499,22 @@ Status PulsarDataConsumer::assign_partition(const std::string& partition, std::s
     pulsar::Result result;
     result = _p_client->subscribe(partition, _subscription, conf, _p_consumer);
     if (result != pulsar::ResultOk) {
-        LOG(WARNING) << "PAUSE: failed to create pulsar consumer: " << ctx->brief(true) << ", err: " << result;
+        LOG(WARNING) << "PAUSE: failed to create pulsar consumer: " << ctx->brief(true)
+                     << ", err: " << result;
         return Status::InternalError("PAUSE: failed to create pulsar consumer: " +
                                      std::string(pulsar::strResult(result)));
     }
 
-    if (initial_position == InitialPosition::LATEST || initial_position == InitialPosition::EARLIEST) {
-        pulsar::InitialPosition p_initial_position = initial_position == InitialPosition::LATEST
-                                                             ? pulsar::InitialPosition::InitialPositionLatest
-                                                             : pulsar::InitialPosition::InitialPositionEarliest;
+    if (initial_position == InitialPosition::LATEST ||
+        initial_position == InitialPosition::EARLIEST) {
+        pulsar::InitialPosition p_initial_position =
+                initial_position == InitialPosition::LATEST
+                        ? pulsar::InitialPosition::InitialPositionLatest
+                        : pulsar::InitialPosition::InitialPositionEarliest;
         result = _p_consumer.seek(p_initial_position);
         if (result != pulsar::ResultOk) {
-            LOG(WARNING) << "PAUSE: failed to reset the subscription: " << ctx->brief(true) << ", err: " << result;
+            LOG(WARNING) << "PAUSE: failed to reset the subscription: " << ctx->brief(true)
+                         << ", err: " << result;
             return Status::InternalError("PAUSE: failed to reset the subscription: " +
                                          std::string(pulsar::strResult(result)));
         }
@@ -560,10 +565,8 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
             if (received_rows == 0) {
                 _topic_name = msg.get()->getTopicName();
                 LOG(INFO) << "receive first pulsar message. "
-                          << "len: " << message_str.size()
-                          << ", message id: " << msg_id
-                          << ", pulsar consumer: " << _id
-                          << ", grp: " << _grp_id
+                          << "len: " << message_str.size() << ", message id: " << msg_id
+                          << ", pulsar consumer: " << _id << ", grp: " << _grp_id
                           << ", topic name: " << _topic_name;
             }
             is_filter = is_filter_event_ids(message_str, filter_event_ids);
@@ -603,8 +606,9 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
         }
     }
 
-    LOG(INFO) << "pulsar consume done: " << _id << ", grp: " << _grp_id << ". cancelled: " << _cancelled
-              << ", left time(ms): " << left_time << ", total cost(ms): " << watch.elapsed_time() / 1000 / 1000
+    LOG(INFO) << "pulsar consume done: " << _id << ", grp: " << _grp_id
+              << ". cancelled: " << _cancelled << ", left time(ms): " << left_time
+              << ", total cost(ms): " << watch.elapsed_time() / 1000 / 1000
               << ", consume cost(ms): " << consumer_watch.elapsed_time() / 1000 / 1000
               << ", received rows: " << received_rows << ", put rows: " << put_rows
               << ", last message id: " << msg_id << ",len: " << message_str.size();
@@ -624,7 +628,8 @@ Status PulsarDataConsumer::get_partition_backlog(int64_t* backlog) {
     if (result != pulsar::ResultOk) {
         LOG(WARNING) << "Failed to get broker consumer stats: "
                      << ", err: " << result;
-        return Status::InternalError("Failed to get broker consumer stats: " + std::string(pulsar::strResult(result)));
+        return Status::InternalError("Failed to get broker consumer stats: " +
+                                     std::string(pulsar::strResult(result)));
     }
     *backlog = broker_consumer_stats.getMsgBacklog();
 
@@ -636,7 +641,8 @@ Status PulsarDataConsumer::get_topic_partition(std::vector<std::string>* partiti
     pulsar::Result result = _p_client->getPartitionsForTopic(_topic, *partitions);
     if (result != pulsar::ResultOk) {
         LOG(WARNING) << "Failed to get partitions for topic: " << _topic << ", err: " << result;
-        return Status::InternalError("Failed to get partitions for topic: " + std::string(pulsar::strResult(result)));
+        return Status::InternalError("Failed to get partitions for topic: " +
+                                     std::string(pulsar::strResult(result)));
     }
 
     return Status::OK();
@@ -660,7 +666,8 @@ Status PulsarDataConsumer::reset() {
     return Status::OK();
 }
 
-Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id, std::string partition) {
+Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id,
+                                                  std::string partition) {
     //避免重复ack
     if (_topic_name.empty() || _topic_name.compare(partition) != 0) {
         return Status::OK();
@@ -670,13 +677,11 @@ Status PulsarDataConsumer::acknowledge_cumulative(pulsar::MessageId& message_id,
         std::stringstream ss;
         ss << "failed to acknowledge cumulative pulsar message : " << res;
         LOG(WARNING) << "failed to acknowledge cumulative pulsar message : " << res
-                     << ",pulsar consumer :" << _id
-                     << ",pulsar group :" << _grp_id;
+                     << ",pulsar consumer :" << _id << ",pulsar group :" << _grp_id;
         return Status::InternalError(ss.str());
     }
     LOG(INFO) << "Succeed to acknowledge cumulative pulsar message : " << res
-              << ",pulsar consumer :" << _id
-              << ",pulsar group :" << _grp_id;
+              << ",pulsar consumer :" << _id << ",pulsar group :" << _grp_id;
     return Status::OK();
 }
 
@@ -690,8 +695,7 @@ Status PulsarDataConsumer::acknowledge(pulsar::MessageId& message_id, std::strin
         std::stringstream ss;
         ss << "failed to acknowledge pulsar message : " << res;
         LOG(WARNING) << "failed to acknowledge pulsar message : " << res
-                     << ",pulsar consumer :" << _id
-                     << ",pulsar group :" << _grp_id;
+                     << ",pulsar consumer :" << _id << ",pulsar group :" << _grp_id;
         return Status::InternalError(ss.str());
     }
     return Status::OK();

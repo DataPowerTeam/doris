@@ -19,12 +19,12 @@
 #include <gen_cpp/PlanNodes_types.h>
 #include <stddef.h>
 
+#include <chrono> // IWYU pragma: keep
 #include <map>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <utility>
-#include <chrono> // IWYU pragma: keep
-#include <sstream>
 
 #include "common/logging.h"
 #include "librdkafka/rdkafkacpp.h"
@@ -216,8 +216,9 @@ Status PulsarDataConsumerGroup::assign_topic_partitions(std::shared_ptr<StreamLo
     for (int i = 0; i < consumer_size; ++i) {
         auto iter = ctx->pulsar_info->initial_positions.find(ctx->pulsar_info->partitions[i]);
         if (iter != ctx->pulsar_info->initial_positions.end()) {
-            RETURN_IF_ERROR(std::static_pointer_cast<PulsarDataConsumer>(_consumers[i])
-                                    ->assign_partition(ctx->pulsar_info->partitions[i], ctx, iter->second));
+            RETURN_IF_ERROR(
+                    std::static_pointer_cast<PulsarDataConsumer>(_consumers[i])
+                            ->assign_partition(ctx->pulsar_info->partitions[i], ctx, iter->second));
         } else {
             RETURN_IF_ERROR(std::static_pointer_cast<PulsarDataConsumer>(_consumers[i])
                                     ->assign_partition(ctx->pulsar_info->partitions[i], ctx));
@@ -251,21 +252,23 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
     // start all consumers
     for (auto& consumer : _consumers) {
-        if (!_thread_pool.offer([this, consumer, capture0 = &_queue, capture1 = ctx->max_interval_s * 1000,
-                capture2 = filter_event_ids, capture3 = [this, &result_st](const Status& st) {
-                 std::unique_lock<std::mutex> lock(_mutex);
-                 _counter--;
-                 VLOG(1) << "group counter is: " << _counter << ", grp: " << _grp_id;
-                 if (_counter == 0) {
-                     _queue.shutdown();
-                     LOG(INFO)
-                             << "all consumers are finished. shutdown queue. group id: " << _grp_id;
-                 }
-                 if (result_st.ok() && !st.ok()) {
-                     result_st = st;
-                 }
-                }] { actual_consume(consumer, capture0, capture1, capture2, capture3); })) {
-            LOG(WARNING) << "failed to submit data consumer: " << consumer->id() << ", group id: " << _grp_id;
+        if (!_thread_pool.offer(
+                    [this, consumer, capture0 = &_queue, capture1 = ctx->max_interval_s * 1000,
+                     capture2 = filter_event_ids, capture3 = [this, &result_st](const Status& st) {
+                         std::unique_lock<std::mutex> lock(_mutex);
+                         _counter--;
+                         VLOG(1) << "group counter is: " << _counter << ", grp: " << _grp_id;
+                         if (_counter == 0) {
+                             _queue.shutdown();
+                             LOG(INFO) << "all consumers are finished. shutdown queue. group id: "
+                                       << _grp_id;
+                         }
+                         if (result_st.ok() && !st.ok()) {
+                             result_st = st;
+                         }
+                    }] { actual_consume(consumer, capture0, capture1, capture2, capture3); })) {
+            LOG(WARNING) << "failed to submit data consumer: " << consumer->id()
+                         << ", group id: " << _grp_id;
             return Status::InternalError("failed to submit data consumer");
         } else {
             VLOG(1) << "submit a data consumer: " << consumer->id() << ", group id: " << _grp_id;
@@ -278,7 +281,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     int64_t put_rows = 0;
     int64_t left_bytes = ctx->max_batch_size;
 
-    std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe = std::static_pointer_cast<io::PulsarConsumerPipe>(ctx->body_sink);
+    std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe =
+            std::static_pointer_cast<io::PulsarConsumerPipe>(ctx->body_sink);
 
     LOG(INFO) << "start consumer group: " << _grp_id << ". max time(ms): " << left_time
               << ", batch size: " << left_bytes << ". " << ctx->brief();
@@ -302,8 +306,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
             LOG(INFO) << "consumer group done: " << _grp_id
                       << ". consume time(ms)=" << ctx->max_interval_s * 1000 - left_time
                       << ", received rows=" << received_rows << ", put rows=" << put_rows
-                      << ", received bytes=" << ctx->max_batch_size - left_bytes
-                      << ", eos: " << eos << ", left_time: " << left_time << ", left_bytes: " << left_bytes
+                      << ", received bytes=" << ctx->max_batch_size - left_bytes << ", eos: " << eos
+                      << ", left_time: " << left_time << ", left_bytes: " << left_bytes
                       << ", blocking get time(us): " << _queue.total_get_wait_time() / 1000
                       << ", blocking put time(us): " << _queue.total_put_wait_time() / 1000;
 
@@ -350,14 +354,14 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             //filter invalid prefix of json
             std::string filter_data = substring_prefix_json(msg->getDataAsString());
-            std::vector<std::string>  rows = convert_rows(filter_data);
+            std::vector<std::string> rows = convert_rows(filter_data);
 
-            VLOG(3)   << "get pulsar message:" << msg->getDataAsString()
-                      << ", partition: " << partition << ", message id: " << msg_id
-                      << ", len: " << len << ", size: " << msg->getDataAsString().size();
+            VLOG(3) << "get pulsar message:" << msg->getDataAsString()
+                    << ", partition: " << partition << ", message id: " << msg_id
+                    << ", len: " << len << ", size: " << msg->getDataAsString().size();
 
             Status st;
-            for(std::string row : rows) {
+            for (std::string row : rows) {
                 bool is_filter = is_filter_event_ids(row, filter_event_ids);
                 if (!is_filter) {
                     continue;
@@ -365,7 +369,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 size_t row_len = row.size();
                 st = (pulsar_pipe.get()->*append_data)(row.c_str(), row_len);
                 if (!st.ok()) {
-                    LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", row =" << row;
+                    LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id
+                                 << ", row =" << row;
                     break;
                 } else {
                     put_rows++;
@@ -373,27 +378,27 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 }
             }
 
-           if (st.ok()) {
-               received_rows++;
-               // len of receive origin message from pulsar
-               if (ack_offset[partition] >= msg_id) {
-                  LOG(WARNING) << "find repeated message id: " << msg_id;
-               }
-               ack_offset[partition] = msg_id;
-               VLOG(3) << "load message id: " << msg_id;
-           } else {
-               // failed to append this msg, we must stop
-               LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg=" << st.to_string();
-               eos = true;
-               {
-                   std::unique_lock<std::mutex> lock(_mutex);
-                   if (result_st.ok()) {
-                       result_st = st;
-                   }
-               }
-           }
-           rows.clear();
-           delete msg;
+            if (st.ok()) {
+                received_rows++;
+                // len of receive origin message from pulsar
+                if (ack_offset[partition] >= msg_id) {
+                   LOG(WARNING) << "find repeated message id: " << msg_id;
+                }
+                ack_offset[partition] = msg_id;
+                VLOG(3) << "load message id: " << msg_id;
+            } else {
+                // failed to append this msg, we must stop
+                LOG(WARNING) << "failed to append msg to pipe. grp: " << _grp_id << ", errmsg=" << st.to_string();
+                eos = true;
+                {
+                    std::unique_lock<std::mutex> lock(_mutex);
+                    if (result_st.ok()) {
+                        result_st = st;
+                    }
+                }
+            }
+            rows.clear();
+            delete msg;
         } else {
             // queue is empty and shutdown
             eos = true;
@@ -406,10 +411,12 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 }
 
 void PulsarDataConsumerGroup::actual_consume(const std::shared_ptr<DataConsumer>& consumer,
-                                             BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms,
+                                             BlockingQueue<pulsar::Message*>* queue,
+                                             int64_t max_running_time_ms,
                                              std::vector<std::string> filter_event_ids,
                                              const ConsumeFinishCallback& cb) {
-    Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->group_consume(queue, filter_event_ids, max_running_time_ms);
+    Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->group_consume(
+            queue, filter_event_ids, max_running_time_ms);
     cb(st);
 }
 
@@ -417,13 +424,14 @@ void PulsarDataConsumerGroup::get_backlog_nums(std::shared_ptr<StreamLoadContext
     for (auto& consumer : _consumers) {
         // get backlog num
         int64_t backlog_num;
-        Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition_backlog(&backlog_num);
+        Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition_backlog(
+                &backlog_num);
         if (!st.ok()) {
             LOG(WARNING) << st.to_string();
         } else {
             ctx->pulsar_info
-                    ->partition_backlog[std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition()] =
-                    backlog_num;
+                    ->partition_backlog[std::static_pointer_cast<PulsarDataConsumer>(consumer)
+                                                ->get_partition()] = backlog_num;
         }
     }
 }
@@ -433,7 +441,9 @@ Status PulsarDataConsumerGroup::acknowledge_cumulative(std::shared_ptr<StreamLoa
     for (auto& kv : ctx->pulsar_info->ack_offset) {
         for (auto& consumer : _consumers) {
             // do cumulative ack
-            Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(kv.second, kv.first);
+            Status st =
+                    std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge_cumulative(
+                            kv.second, kv.first);
             if (!st.ok()) {
                 result_st = st;
             }
@@ -445,9 +455,11 @@ Status PulsarDataConsumerGroup::acknowledge_cumulative(std::shared_ptr<StreamLoa
 void PulsarDataConsumerGroup::acknowledge(pulsar::MessageId& message_id, std::string partition) {
     for (auto& consumer : _consumers) {
         // do ack
-        Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge(message_id, partition);
+        Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->acknowledge(message_id,
+                                                                                        partition);
         if (!st.ok()) {
-            LOG(WARNING) << "failed to ack message id: " << message_id << ", consumer: " << consumer;
+            LOG(WARNING) << "failed to ack message id: " << message_id
+                         << ", consumer: " << consumer;
         }
     }
 }
@@ -477,11 +489,11 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
     rapidjson::Document source;
     rapidjson::Document destination;
     rapidjson::StringBuffer buffer;
-    if(!source.Parse(data.c_str()).HasParseError()) {
+    if (!source.Parse(data.c_str()).HasParseError()) {
         if (source.HasMember("events") && source["events"].IsArray()) {
             const rapidjson::Value& array = source["events"];
             size_t len = array.Size();
-            for(size_t i = 0; i < len; i++) {
+            for (size_t i = 0; i < len; i++) {
                 destination.SetObject();
                 for (auto& member : source.GetObject()) {
                     const char* key = member.name.GetString();
@@ -518,8 +530,8 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
     return targets;
 }
 
-bool PulsarDataConsumerGroup::is_filter_event_ids(const std::string& data,
-                                                  const std::vector<std::string>& filter_event_ids) {
+bool PulsarDataConsumerGroup::is_filter_event_ids(
+        const std::string& data, const std::vector<std::string>& filter_event_ids) {
     if (filter_event_ids.empty()) {
         return true;
     }
@@ -531,7 +543,8 @@ bool PulsarDataConsumerGroup::is_filter_event_ids(const std::string& data,
     return false;
 }
 
-std::vector<std::string> PulsarDataConsumerGroup::parse_event_ids_vector(std::shared_ptr<StreamLoadContext> ctx) {
+std::vector<std::string> PulsarDataConsumerGroup::parse_event_ids_vector(
+        std::shared_ptr<StreamLoadContext> ctx) {
     std::vector<std::string> tokens;
     for (auto& item : ctx->pulsar_info->properties) {
         if (item.first == "event.ids") {

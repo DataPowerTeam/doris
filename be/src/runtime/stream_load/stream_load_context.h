@@ -33,11 +33,11 @@
 
 #include "common/status.h"
 #include "common/utils.h"
+#include "pulsar/Client.h"
 #include "runtime/exec_env.h"
 #include "runtime/stream_load/stream_load_executor.h"
 #include "util/time.h"
 #include "util/uid_util.h"
-#include "pulsar/Client.h"
 
 namespace doris {
 namespace io {

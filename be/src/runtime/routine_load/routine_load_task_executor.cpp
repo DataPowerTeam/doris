@@ -198,15 +198,16 @@ Status RoutineLoadTaskExecutor::get_pulsar_partition_meta(const PPulsarMetaProxy
     std::shared_ptr<DataConsumer> consumer;
     RETURN_IF_ERROR(_data_consumer_pool.get_consumer(ctx, &consumer));
 
-    Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_topic_partition(partitions);
+    Status st =
+            std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_topic_partition(partitions);
     if (st.ok()) {
         _data_consumer_pool.return_consumer(consumer);
     }
     return st;
 }
 
-Status RoutineLoadTaskExecutor::get_pulsar_partition_backlog(const PPulsarBacklogProxyRequest& request,
-                                                             std::vector<int64_t>* backlog_num) {
+Status RoutineLoadTaskExecutor::get_pulsar_partition_backlog(
+        const PPulsarBacklogProxyRequest& request, std::vector<int64_t>* backlog_num) {
     DCHECK(request.has_pulsar_info());
 
     // This context is meaningless, just for unifing the interface
@@ -244,8 +245,10 @@ Status RoutineLoadTaskExecutor::get_pulsar_partition_backlog(const PPulsarBacklo
     RETURN_IF_ERROR(_data_consumer_pool.get_consumer(ctx, &consumer));
     for (auto p : partitions) {
         int64_t backlog = 0;
-        RETURN_IF_ERROR(std::static_pointer_cast<PulsarDataConsumer>(consumer)->assign_partition(p, ctx));
-        st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition_backlog(&backlog);
+        RETURN_IF_ERROR(
+                std::static_pointer_cast<PulsarDataConsumer>(consumer)->assign_partition(p, ctx));
+        st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->get_partition_backlog(
+                &backlog);
         std::static_pointer_cast<PulsarDataConsumer>(consumer).reset();
         backlog_num->push_back(backlog);
     }
@@ -399,7 +402,8 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     }
     case TLoadSourceType::PULSAR: {
         pipe = std::make_shared<io::PulsarConsumerPipe>();
-        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)->assign_topic_partitions(ctx);
+        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
+                            ->assign_topic_partitions(ctx);
         if (!st.ok()) {
             err_handler(ctx, st, st.to_string());
             cb(ctx);
@@ -460,7 +464,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
 
     // return the consumer back to pool
     // call this before commit txn, in case the next task can come very fast
-//    consumer_pool->return_consumers(consumer_grp.get());
+    //    consumer_pool->return_consumers(consumer_grp.get());
 
     // commit txn
     HANDLE_ERROR(_exec_env->stream_load_executor()->commit_txn(ctx.get()), "commit failed");
@@ -501,7 +505,8 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     }
     case TLoadSourceType::PULSAR: {
         //do ack
-        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)->acknowledge_cumulative(ctx);
+        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
+                            ->acknowledge_cumulative(ctx);
         if (!st.ok()) {
             LOG(WARNING) << st;
         }

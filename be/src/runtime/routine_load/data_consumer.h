@@ -30,11 +30,11 @@
 
 #include "common/logging.h"
 #include "common/status.h"
+#include "io/fs/kafka_consumer_pipe.h"
 #include "librdkafka/rdkafkacpp.h"
+#include "pulsar/Client.h"
 #include "runtime/stream_load/stream_load_context.h"
 #include "util/uid_util.h"
-#include "pulsar/Client.h"
-#include "io/fs/kafka_consumer_pipe.h"
 
 namespace doris {
 
@@ -187,8 +187,7 @@ public:
     enum InitialPosition { LATEST, EARLIEST };
 
     Status init(std::shared_ptr<StreamLoadContext> ctx) override;
-    Status assign_partition(const std::string& partition,
-                            std::shared_ptr<StreamLoadContext> ctx,
+    Status assign_partition(const std::string& partition, std::shared_ptr<StreamLoadContext> ctx,
                             int64_t initial_position = -1);
     // TODO(cmy): currently do not implement single consumer start method, using group_consume
     Status consume(std::shared_ptr<StreamLoadContext> ctx) override { return Status::OK(); }
@@ -203,8 +202,7 @@ public:
 
     // start the consumer and put msgs to queue
     Status group_consume(BlockingQueue<pulsar::Message*>* queue,
-                         std::vector<std::string> filter_event_ids,
-                         int64_t max_running_time_ms);
+                         std::vector<std::string> filter_event_ids, int64_t max_running_time_ms);
 
     // get the partitions of the topic
     Status get_topic_partition(std::vector<std::string>* partitions);
@@ -214,7 +212,8 @@ public:
 
     const std::string& get_partition();
 
-    bool is_filter_event_ids(const std::string& data, const std::vector<std::string>& filter_event_ids);
+    bool is_filter_event_ids(const std::string& data,
+                             const std::vector<std::string>& filter_event_ids);
 private:
     std::string _service_url;
     std::string _topic;

@@ -120,9 +120,9 @@ public:
 
 private:
     // start a single consumer
-    void actual_consume(const std::shared_ptr<DataConsumer>& consumer, BlockingQueue<pulsar::Message*>* queue,
-                        int64_t max_running_time_ms, std::vector<std::string> filter_event_ids,
-                        const ConsumeFinishCallback& cb);
+    void actual_consume(const std::shared_ptr<DataConsumer>& consumer,
+                        BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms,
+                        std::vector<std::string> filter_event_ids, const ConsumeFinishCallback& cb);
 
     void get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx);
 
@@ -135,7 +135,8 @@ private:
     // acknowledge pulsar message
     void acknowledge(pulsar::MessageId& message_id, std::string partition);
 
-    bool is_filter_event_ids(const std::string& data, const std::vector<std::string>& filter_event_ids);
+    bool is_filter_event_ids(const std::string& data,
+                             const std::vector<std::string>& filter_event_ids);
 
     std::vector<std::string> parse_event_ids_vector(std::shared_ptr<StreamLoadContext> ctx);
 

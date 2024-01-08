@@ -337,8 +337,9 @@ std::string StreamLoadContext::brief(bool detail) const {
         case TLoadSourceType::PULSAR:
             if (pulsar_info != nullptr) {
                 ss << ", load type: pulsar routine load"
-                   << ", source_url: " << pulsar_info->service_url << ", topic: " << pulsar_info->topic
-                   << ", subscription" << pulsar_info->subscription << ", partitions: [";
+                   << ", source_url: " << pulsar_info->service_url
+                   << ", topic: " << pulsar_info->topic << ", subscription"
+                   << pulsar_info->subscription << ", partitions: [";
                 for (auto& partition : pulsar_info->partitions) {
                     ss << partition << ",";
                 }
