@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "pulsar/Client.h"
 #include "runtime/routine_load/data_consumer_pool.h"
 #include "util/uid_util.h"
 #include "util/work_thread_pool.hpp"
@@ -62,6 +63,12 @@ public:
 
     Status get_kafka_latest_offsets_for_partitions(const PKafkaMetaProxyRequest& request,
                                                    std::vector<PIntegerPair>* partition_offsets);
+
+    Status get_pulsar_partition_meta(const PPulsarMetaProxyRequest& request,
+                                     std::vector<std::string>* partitions);
+
+    Status get_pulsar_partition_backlog(const PPulsarBacklogProxyRequest& request,
+                                        std::vector<int64_t>* backlog_num);
 
 private:
     // execute the task

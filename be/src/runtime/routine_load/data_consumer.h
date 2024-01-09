@@ -30,7 +30,9 @@
 
 #include "common/logging.h"
 #include "common/status.h"
+#include "io/fs/kafka_consumer_pipe.h"
 #include "librdkafka/rdkafkacpp.h"
+#include "pulsar/Client.h"
 #include "runtime/stream_load/stream_load_context.h"
 #include "util/uid_util.h"
 
@@ -163,6 +165,66 @@ private:
 
     KafkaEventCb _k_event_cb;
     RdKafka::KafkaConsumer* _k_consumer = nullptr;
+};
+
+class PulsarDataConsumer : public DataConsumer {
+public:
+    PulsarDataConsumer(std::shared_ptr<StreamLoadContext> ctx)
+            : DataConsumer(),
+              _service_url(ctx->pulsar_info->service_url),
+              _topic(ctx->pulsar_info->topic),
+              _subscription(ctx->pulsar_info->subscription) {}
+
+    ~PulsarDataConsumer() override {
+        VLOG(3) << "deconstruct pulsar client";
+        if (_p_client) {
+            _p_client->close();
+            delete _p_client;
+            _p_client = nullptr;
+        }
+    }
+
+    enum InitialPosition { LATEST, EARLIEST };
+
+    Status init(std::shared_ptr<StreamLoadContext> ctx) override;
+    Status assign_partition(const std::string& partition, std::shared_ptr<StreamLoadContext> ctx,
+                            int64_t initial_position = -1);
+    // TODO(cmy): currently do not implement single consumer start method, using group_consume
+    Status consume(std::shared_ptr<StreamLoadContext> ctx) override { return Status::OK(); }
+    Status cancel(std::shared_ptr<StreamLoadContext> ctx) override;
+    // reassign partition topics
+    Status reset() override;
+    bool match(std::shared_ptr<StreamLoadContext> ctx) override;
+    // acknowledge pulsar message
+    Status acknowledge_cumulative(pulsar::MessageId& message_id, std::string partition);
+
+    Status acknowledge(pulsar::MessageId& message_id, std::string partition);
+
+    // start the consumer and put msgs to queue
+    Status group_consume(BlockingQueue<pulsar::Message*>* queue,
+                         std::vector<std::string> filter_event_ids, int64_t max_running_time_ms);
+
+    // get the partitions of the topic
+    Status get_topic_partition(std::vector<std::string>* partitions);
+
+    // get backlog num of partition
+    Status get_partition_backlog(int64_t* backlog);
+
+    const std::string& get_partition();
+
+    bool is_filter_event_ids(const std::string& data,
+                             const std::vector<std::string>& filter_event_ids);
+
+private:
+    std::string _service_url;
+    std::string _topic;
+    std::string _subscription;
+    std::unordered_map<std::string, std::string> _custom_properties;
+    std::string _topic_name;
+
+    pulsar::Client* _p_client = nullptr;
+    pulsar::Consumer _p_consumer;
+    std::shared_ptr<io::PulsarConsumerPipe> _p_consumer_pipe;
 };
 
 } // end namespace doris
