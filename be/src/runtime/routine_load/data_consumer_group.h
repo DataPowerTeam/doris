@@ -130,7 +130,7 @@ private:
 
     size_t len_of_actual_data(const char* data);
 
-    std::vector<std::string> convert_rows(std::string& data);
+    std::vector<std::string> convert_rows(std::string& data, std::tm current_date, int64_t day);
 
     // acknowledge pulsar message
     void acknowledge(pulsar::MessageId& message_id, std::string partition);
