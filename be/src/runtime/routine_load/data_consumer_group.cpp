@@ -25,6 +25,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <iomanip>
 
 #include "common/logging.h"
 #include "librdkafka/rdkafkacpp.h"
@@ -33,6 +34,8 @@
 #include "util/stopwatch.hpp"
 
 namespace doris {
+
+static const int DEFAULT_DAY = 24 * 60 * 60;
 
 Status KafkaDataConsumerGroup::assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx) {
     DCHECK(ctx->kafka_info);
@@ -246,9 +249,12 @@ PulsarDataConsumerGroup::~PulsarDataConsumerGroup() {
 Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx) {
     Status result_st = Status::OK();
 
+    std::tm current_date = getCurrentDate();
+    int64_t diff_day = parse_diff_day_int(ctx);
     std::vector<std::string> filter_event_ids = parse_event_ids_vector(ctx);
     LOG(INFO) << "group _consumers size is: " << _consumers.size()
-              << "filter_event_ids size is: " << filter_event_ids.size();
+              << "filter_event_ids size is: " << filter_event_ids.size()
+              << "diff_day is: " << diff_day;
 
     // start all consumers
     for (auto& consumer : _consumers) {
@@ -354,7 +360,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             //filter invalid prefix of json
             std::string filter_data = substring_prefix_json(msg->getDataAsString());
-            std::vector<std::string> rows = convert_rows(filter_data);
+            std::vector<std::string> rows = convert_rows(filter_data, current_date, diff_day);
 
             VLOG(3) << "get pulsar message:" << msg->getDataAsString()
                     << ", partition: " << partition << ", message id: " << msg_id
@@ -485,12 +491,31 @@ size_t PulsarDataConsumerGroup::len_of_actual_data(const char* data) {
     return length;
 }
 
-std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data) {
+std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data, std::tm current_date, int64_t day) {
     std::vector<std::string> targets;
     rapidjson::Document source;
     rapidjson::Document destination;
     rapidjson::StringBuffer buffer;
+    //针对无法解析的json，尝试先过滤一波非utf-8的字符
+    if (source.Parse(data.c_str()).HasParseError()) {
+        data = removeNonUTF8Chars(data);
+        source.Clear();
+        rapidjson::Document().Swap(source);
+    }
+
     if (!source.Parse(data.c_str()).HasParseError()) {
+        // 根据rtime字段，日期统一转为yyyy-MM-dd格式，比对rtime和今天，判断是否在允许录入的时间范围内
+        if (source.HasMember("rtime") && source["rtime"].IsString()) {
+            std::string rtime = source["rtime"].GetString();
+            if (!isDateInRange(rtime, current_date, day)) {
+                LOG(WARNING) << "the rtime field is out of the allowed time range: " << rtime
+                             << "Failed to convert rows, pass json: " << data;
+                source.Clear();
+                rapidjson::Document().Swap(source);
+                return targets;
+            }
+        }
+
         if (source.HasMember("events") && source["events"].IsArray()) {
             const rapidjson::Value& array = source["events"];
             size_t len = array.Size();
@@ -557,6 +582,108 @@ std::vector<std::string> PulsarDataConsumerGroup::parse_event_ids_vector(
         }
     }
     return tokens;
+}
+
+int64_t PulsarDataConsumerGroup::parse_diff_day_int(std::shared_ptr<StreamLoadContext> ctx) {
+    int64_t result = 3;
+    for (auto& item : ctx->pulsar_info->properties) {
+        if (item.first == "diff.day") {
+            result = std::stoll(item.second);
+        }
+    }
+    return result;
+}
+
+// 判断是否是UTF-8的合法字符
+bool PulsarDataConsumerGroup::isValidUTF8Char(const char c) {
+    if ((c & 0x80) == 0) {
+        // 单字节字符
+        return true;
+    } else if ((c & 0xE0) == 0xC0) {
+        // 双字节字符
+        return true;
+    } else if ((c & 0xF0) == 0xE0) {
+        // 三字节字符
+        return true;
+    } else if ((c & 0xF8) == 0xF0) {
+        // 四字节字符
+        return true;
+    }
+    return false;
+}
+
+std::string PulsarDataConsumerGroup::removeNonUTF8Chars(const std::string& input) {
+    std::string result;
+    result.reserve(input.size());
+    for (size_t i = 0; i < input.size(); ++i) {
+        char current_char = input[i];
+        if ((current_char & 0x80) == 0) {
+            // Single-byte character (ASCII), just add to the result
+            result += current_char;
+        } else {
+            // Multi-byte character, check if it's a valid UTF-8 sequence
+            int num_bytes = 1;
+            while ((current_char & (0x80 >> num_bytes)) != 0) {
+                ++num_bytes;
+            }
+
+            if (num_bytes == 1 || num_bytes > 4) {
+                // Invalid UTF-8 sequence, skip this character
+                continue;
+            }
+
+            // Check continuation bytes
+            bool is_valid_UTF8 = true;
+            for (int j = 1; j < num_bytes; ++j) {
+                if (i + j >= input.size() || !isValidUTF8Char(input[i + j])) {
+                    is_valid_UTF8 = false;
+                    break;
+                }
+            }
+
+            if (is_valid_UTF8) {
+                // Valid UTF-8 sequence, add to the result
+                result += current_char;
+                for (int j = 1; j < num_bytes; ++j) {
+                    result += input[i + j];
+                }
+                i += num_bytes - 1;
+            }
+        }
+    }
+    return result;
+}
+
+bool PulsarDataConsumerGroup::isDateInRange(std::string& date_string, std::tm current_date, int64_t day) {
+    // 将字符串解析为日期
+    std::tm tm = {};
+    std::istringstream ss(date_string);
+    ss >> std::get_time(&tm, "%Y-%m-%d");
+
+    if (ss.fail()) {
+        LOG(WARNING) << "Failed to parse the date string : " << date_string;
+        return false;
+    }
+
+    // 判断是否在三天前到三天后之间（一周内）
+    auto date = std::mktime(&tm);
+    auto current = std::mktime(&current_date);
+
+    return std::difftime(date, current) >= -1 * DEFAULT_DAY * day && std::difftime(date, current) <= day * DEFAULT_DAY;
+}
+
+std::tm PulsarDataConsumerGroup::getCurrentDate() {
+    // 获取当前日期
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    std::tm current_date = *std::localtime(&now_time);
+
+    // 调整当前日期到0点0分0秒
+    current_date.tm_hour = 0;
+    current_date.tm_min = 0;
+    current_date.tm_sec = 0;
+
+    return current_date;
 }
 
 } // namespace doris

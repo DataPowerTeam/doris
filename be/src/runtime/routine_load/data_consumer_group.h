@@ -140,6 +140,16 @@ private:
 
     std::vector<std::string> parse_event_ids_vector(std::shared_ptr<StreamLoadContext> ctx);
 
+    int64_t parse_diff_day_int(std::shared_ptr<StreamLoadContext> ctx);
+
+    bool isValidUTF8Char(const char c);
+
+    std::string removeNonUTF8Chars(const std::string& input);
+
+    bool isDateInRange(std::string& date_string, std::tm current_date, int64_t day);
+
+    std::tm getCurrentDate();
+
 private:
     // blocking queue to receive msgs from all consumers
     BlockingQueue<pulsar::Message*> _queue;
