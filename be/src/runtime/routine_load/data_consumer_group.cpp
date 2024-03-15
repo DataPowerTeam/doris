@@ -561,7 +561,7 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
     return targets;
 }
 
-std::string PulsarDataConsumerGroup::convert_map_to_struct(const rapidjson::Value& map) {
+std::string PulsarDataConsumerGroup::convert_map_to_struct(rapidjson::Value& map) {
     rapidjson::Document destination;
     destination.SetObject();
     if (map.IsObject()) {
