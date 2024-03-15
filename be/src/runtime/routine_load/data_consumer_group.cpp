@@ -530,9 +530,11 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
                         destination.AddMember(keyName, sourceValue, destination.GetAllocator());
                     } else {
                         rapidjson::Value& object = const_cast<rapidjson::Value&>(array[i]);
+                        rapidjson::Value param(rapidjson::kObjectType);
+                        param.CopyFrom(object, destination.GetAllocator());
+                        std::string eventStruct = convert_map_to_struct(param);
                         rapidjson::Value eventName("event", destination.GetAllocator());
                         destination.AddMember(eventName, object, destination.GetAllocator());
-                        std::string eventStruct = convert_map_to_struct(object);
                         rapidjson::Value eventStructName("event_struct", destination.GetAllocator());
                         rapidjson::Value eventStructValue;
                         eventStructValue.SetString(eventStruct.c_str(),eventStruct.length(),destination.GetAllocator());
