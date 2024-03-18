@@ -132,6 +132,8 @@ private:
 
     std::vector<std::string> convert_rows(std::string& data, std::tm current_date, int64_t day);
 
+    std::string convert_map_to_struct(rapidjson::Value& map);
+
     // acknowledge pulsar message
     void acknowledge(pulsar::MessageId& message_id, std::string partition);
 

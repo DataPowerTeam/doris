@@ -530,8 +530,15 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
                         destination.AddMember(keyName, sourceValue, destination.GetAllocator());
                     } else {
                         rapidjson::Value& object = const_cast<rapidjson::Value&>(array[i]);
+                        rapidjson::Value param(rapidjson::kObjectType);
+                        param.CopyFrom(object, destination.GetAllocator());
+                        std::string eventStruct = convert_map_to_struct(param);
                         rapidjson::Value eventName("event", destination.GetAllocator());
                         destination.AddMember(eventName, object, destination.GetAllocator());
+                        rapidjson::Value eventStructName("event_struct", destination.GetAllocator());
+                        rapidjson::Value eventStructValue;
+                        eventStructValue.SetString(eventStruct.c_str(),eventStruct.length(),destination.GetAllocator());
+                        destination.AddMember(eventStructName, eventStructValue, destination.GetAllocator());
                     }
                 }
 
@@ -554,6 +561,57 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
     source.Clear();
     rapidjson::Document().Swap(source);
     return targets;
+}
+
+std::string PulsarDataConsumerGroup::convert_map_to_struct(rapidjson::Value& map) {
+    rapidjson::Document destination;
+    destination.SetObject();
+    if (map.IsObject()) {
+        rapidjson::Value timeName("time", destination.GetAllocator());
+        if (map.HasMember("time")) {
+            rapidjson::Value& timeValue = map["time"];
+            destination.AddMember(timeName, timeValue, destination.GetAllocator());
+        } else {
+            rapidjson::Value value;
+            value.SetNull();
+            destination.AddMember(timeName, value, destination.GetAllocator());
+        }
+        rapidjson::Value lngName("lng", destination.GetAllocator());
+        if (map.HasMember("lng")) {
+            rapidjson::Value& lngValue = map["lng"];
+            destination.AddMember(lngName, lngValue, destination.GetAllocator());
+        } else {
+            rapidjson::Value value;
+            value.SetNull();
+            destination.AddMember(lngName, value, destination.GetAllocator());
+        }
+        rapidjson::Value latName("lat", destination.GetAllocator());
+        if (map.HasMember("lat")) {
+            rapidjson::Value& latValue = map["lat"];
+            destination.AddMember(latName, latValue, destination.GetAllocator());
+        } else {
+            rapidjson::Value value;
+            value.SetNull();
+            destination.AddMember(latName, value, destination.GetAllocator());
+        }
+        rapidjson::Value netName("net", destination.GetAllocator());
+        if (map.HasMember("net")) {
+            rapidjson::Value& netValue = map["net"];
+            destination.AddMember(netName, netValue, destination.GetAllocator());
+        } else {
+            rapidjson::Value value;
+            value.SetNull();
+            destination.AddMember(netName, value, destination.GetAllocator());
+        }
+    }
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    destination.Accept(writer);
+    std::string dest_string(buffer.GetString(), buffer.GetSize());
+    buffer.Clear();
+    destination.Clear();
+    rapidjson::Document().Swap(destination);
+    return dest_string;
 }
 
 bool PulsarDataConsumerGroup::is_filter_event_ids(
