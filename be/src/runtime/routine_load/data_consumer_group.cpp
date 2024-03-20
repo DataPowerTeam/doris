@@ -530,6 +530,7 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
                         destination.AddMember(keyName, sourceValue, destination.GetAllocator());
                     } else {
                         rapidjson::Value& object = const_cast<rapidjson::Value&>(array[i]);
+                        //改为直接传参，取消复制object，减少内存
                         std::string eventStruct = convert_map_to_struct(object);
                         rapidjson::Value eventName("event", destination.GetAllocator());
                         destination.AddMember(eventName, object, destination.GetAllocator());
@@ -579,6 +580,7 @@ std::string PulsarDataConsumerGroup::convert_map_to_struct(rapidjson::Value& map
         bool lng  = false;
         bool lat  = false;
         bool net  = false;
+        //从四次查找改为一次遍历，并只复制需要的数据，避免原map中key对应的value的缺失
         for (auto it = map.GetObject().MemberBegin(); it != map.GetObject().MemberEnd(); ++it) {
             if (time && lng && lat && net) {
                 break;
