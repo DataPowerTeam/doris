@@ -730,7 +730,6 @@ bool PulsarDataConsumerGroup::isDateInRange(std::string& date_string,
     tm.tm_year -= 1900;  // 年份是从1900年开始计算的，需要减去1900
     tm.tm_mon  -= 1;     // 月份是从0开始计算的，需要减去1
     //比较是否在日期区间
-    //比较是否在日期区间
     if (tm.tm_year < before_date.tm_year || tm.tm_year > later_date.tm_year) {
         return false;
     }
