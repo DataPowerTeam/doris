@@ -130,7 +130,7 @@ private:
 
     size_t len_of_actual_data(const char* data);
 
-    std::vector<std::string> convert_rows(std::string& data, std::tm current_date, int64_t day);
+    std::vector<std::string> convert_rows(std::string& data, std::tm before_date, std::tm later_date);
 
     std::string convert_map_to_struct(rapidjson::Value& map);
 
@@ -148,9 +148,9 @@ private:
 
     std::string removeNonUTF8Chars(const std::string& input);
 
-    bool isDateInRange(std::string& date_string, std::tm current_date, int64_t day);
+    bool isDateInRange(std::string& date_string, std::tm before_date, std::tm later_date);
 
-    std::tm getCurrentDate();
+    std::tm getSpecialDate(int64_t day);
 
 private:
     // blocking queue to receive msgs from all consumers

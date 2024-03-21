@@ -35,8 +35,6 @@
 
 namespace doris {
 
-static const int DEFAULT_DAY = 24 * 60 * 60;
-
 Status KafkaDataConsumerGroup::assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx) {
     DCHECK(ctx->kafka_info);
     DCHECK(_consumers.size() >= 1);
@@ -249,8 +247,9 @@ PulsarDataConsumerGroup::~PulsarDataConsumerGroup() {
 Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx) {
     Status result_st = Status::OK();
 
-    std::tm current_date = getCurrentDate();
     int64_t diff_day = parse_diff_day_int(ctx);
+    std::tm later_date  = getSpecialDate(diff_day);
+    std::tm before_date = getSpecialDate(-1 * diff_day);
     std::vector<std::string> filter_event_ids = parse_event_ids_vector(ctx);
     LOG(INFO) << "group _consumers size is: " << _consumers.size()
               << "filter_event_ids size is: " << filter_event_ids.size()
@@ -360,7 +359,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
             //filter invalid prefix of json
             std::string filter_data = substring_prefix_json(msg->getDataAsString());
-            std::vector<std::string> rows = convert_rows(filter_data, current_date, diff_day);
+            std::vector<std::string> rows = convert_rows(filter_data, before_date, later_date);
 
             VLOG(3) << "get pulsar message:" << msg->getDataAsString()
                     << ", partition: " << partition << ", message id: " << msg_id
@@ -491,23 +490,27 @@ size_t PulsarDataConsumerGroup::len_of_actual_data(const char* data) {
     return length;
 }
 
-std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data, std::tm current_date, int64_t day) {
+std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data,
+                                                               std::tm before_date,
+                                                               std::tm later_date) {
     std::vector<std::string> targets;
     rapidjson::Document source;
     rapidjson::Document destination;
     rapidjson::StringBuffer buffer;
     //针对无法解析的json，尝试先过滤一波非utf-8的字符
-    if (source.Parse(data.c_str()).HasParseError()) {
+    bool first_parse_error = source.Parse(data.c_str()).HasParseError();
+    if (first_parse_error) {
         data = removeNonUTF8Chars(data);
         source.Clear();
         rapidjson::Document().Swap(source);
     }
 
-    if (!source.Parse(data.c_str()).HasParseError()) {
+    //避免重复parse
+    if (!first_parse_error || !source.Parse(data.c_str()).HasParseError()) {
         // 根据rtime字段，日期统一转为yyyy-MM-dd格式，比对rtime和今天，判断是否在允许录入的时间范围内
         if (source.HasMember("rtime") && source["rtime"].IsString()) {
             std::string rtime = source["rtime"].GetString();
-            if (!isDateInRange(rtime, current_date, day)) {
+            if (!isDateInRange(rtime, before_date, later_date)) {
                 LOG(WARNING) << "the rtime field is out of the allowed time range: " << rtime
                              << "Failed to convert rows, pass json: " << data;
                 source.Clear();
@@ -530,9 +533,8 @@ std::vector<std::string> PulsarDataConsumerGroup::convert_rows(std::string& data
                         destination.AddMember(keyName, sourceValue, destination.GetAllocator());
                     } else {
                         rapidjson::Value& object = const_cast<rapidjson::Value&>(array[i]);
-                        rapidjson::Value param(rapidjson::kObjectType);
-                        param.CopyFrom(object, destination.GetAllocator());
-                        std::string eventStruct = convert_map_to_struct(param);
+                        //改为直接传参，取消复制object，减少内存
+                        std::string eventStruct = convert_map_to_struct(object);
                         rapidjson::Value eventName("event", destination.GetAllocator());
                         destination.AddMember(eventName, object, destination.GetAllocator());
                         rapidjson::Value eventStructName("event_struct", destination.GetAllocator());
@@ -568,40 +570,39 @@ std::string PulsarDataConsumerGroup::convert_map_to_struct(rapidjson::Value& map
     destination.SetObject();
     if (map.IsObject()) {
         rapidjson::Value timeName("time", destination.GetAllocator());
-        if (map.HasMember("time")) {
-            rapidjson::Value& timeValue = map["time"];
-            destination.AddMember(timeName, timeValue, destination.GetAllocator());
-        } else {
-            rapidjson::Value value;
-            value.SetNull();
-            destination.AddMember(timeName, value, destination.GetAllocator());
-        }
         rapidjson::Value lngName("lng", destination.GetAllocator());
-        if (map.HasMember("lng")) {
-            rapidjson::Value& lngValue = map["lng"];
-            destination.AddMember(lngName, lngValue, destination.GetAllocator());
-        } else {
-            rapidjson::Value value;
-            value.SetNull();
-            destination.AddMember(lngName, value, destination.GetAllocator());
-        }
         rapidjson::Value latName("lat", destination.GetAllocator());
-        if (map.HasMember("lat")) {
-            rapidjson::Value& latValue = map["lat"];
-            destination.AddMember(latName, latValue, destination.GetAllocator());
-        } else {
-            rapidjson::Value value;
-            value.SetNull();
-            destination.AddMember(latName, value, destination.GetAllocator());
-        }
         rapidjson::Value netName("net", destination.GetAllocator());
-        if (map.HasMember("net")) {
-            rapidjson::Value& netValue = map["net"];
-            destination.AddMember(netName, netValue, destination.GetAllocator());
-        } else {
-            rapidjson::Value value;
-            value.SetNull();
-            destination.AddMember(netName, value, destination.GetAllocator());
+        rapidjson::Value value;
+        value.SetNull();
+        destination.AddMember(timeName, value, destination.GetAllocator());
+        destination.AddMember(lngName, value, destination.GetAllocator());
+        destination.AddMember(latName, value, destination.GetAllocator());
+        destination.AddMember(netName, value, destination.GetAllocator());
+        bool time = false;
+        bool lng  = false;
+        bool lat  = false;
+        bool net  = false;
+        //从四次查找改为一次遍历，并只复制需要的数据，避免原map中key对应的value的缺失
+        for (auto it = map.GetObject().MemberBegin(); it != map.GetObject().MemberEnd(); ++it) {
+            if (time && lng && lat && net) {
+                break;
+            }
+            const auto& member = *it;
+            const char* key = member.name.GetString();
+            if (std::strcmp(key, "time") == 0) {
+                destination["time"].CopyFrom(map["time"], destination.GetAllocator());
+                time = true;
+            } else if (std::strcmp(key, "lng") == 0) {
+                destination["lng"].CopyFrom(map["lng"], destination.GetAllocator());
+                lng = true;
+            } else if (std::strcmp(key, "lat") == 0) {
+                destination["lat"].CopyFrom(map["lat"], destination.GetAllocator());
+                lat = true;
+            } else if (std::strcmp(key, "net") == 0) {
+                destination["net"].CopyFrom(map["net"], destination.GetAllocator());
+                net = true;
+            }
         }
     }
     rapidjson::StringBuffer buffer;
@@ -675,6 +676,10 @@ std::string PulsarDataConsumerGroup::removeNonUTF8Chars(const std::string& input
     result.reserve(input.size());
     for (size_t i = 0; i < input.size(); ++i) {
         char current_char = input[i];
+        //额外去除控制字符
+        if (std::iscntrl(static_cast<unsigned char>(current_char))) {
+            continue;
+        }
         if ((current_char & 0x80) == 0) {
             // Single-byte character (ASCII), just add to the result
             result += current_char;
@@ -712,36 +717,50 @@ std::string PulsarDataConsumerGroup::removeNonUTF8Chars(const std::string& input
     return result;
 }
 
-bool PulsarDataConsumerGroup::isDateInRange(std::string& date_string, std::tm current_date, int64_t day) {
-    // 将字符串解析为日期
+bool PulsarDataConsumerGroup::isDateInRange(std::string& date_string,
+                                            std::tm before_date,
+                                            std::tm later_date) {
+    // 解析日期字符串
     std::tm tm = {};
-    std::istringstream ss(date_string);
-    ss >> std::get_time(&tm, "%Y-%m-%d");
-
-    if (ss.fail()) {
+    int parsed_items = sscanf(date_string.c_str(), "%d-%d-%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday);
+    if (parsed_items != 3) {
         LOG(WARNING) << "Failed to parse the date string : " << date_string;
         return false;
     }
-
-    // 判断是否在三天前到三天后之间（一周内）
-    auto date = std::mktime(&tm);
-    auto current = std::mktime(&current_date);
-
-    return std::difftime(date, current) >= -1 * DEFAULT_DAY * day && std::difftime(date, current) <= day * DEFAULT_DAY;
+    tm.tm_year -= 1900;  // 年份是从1900年开始计算的，需要减去1900
+    tm.tm_mon  -= 1;     // 月份是从0开始计算的，需要减去1
+    //比较是否在日期区间
+    if (tm.tm_year < before_date.tm_year || tm.tm_year > later_date.tm_year) {
+        return false;
+    }
+    if (tm.tm_year == before_date.tm_year && tm.tm_mon < before_date.tm_mon) {
+        return false;
+    }
+    if (tm.tm_year == later_date.tm_year && tm.tm_mon > later_date.tm_mon) {
+        return false;
+    }
+    if (tm.tm_year == before_date.tm_year && tm.tm_mon == before_date.tm_mon && tm.tm_mday < before_date.tm_mday) {
+        return false;
+    }
+    if (tm.tm_year == later_date.tm_year && tm.tm_mon == later_date.tm_mon && tm.tm_mday > later_date.tm_mday) {
+        return false;
+    }
+    return true;
 }
 
-std::tm PulsarDataConsumerGroup::getCurrentDate() {
+std::tm PulsarDataConsumerGroup::getSpecialDate(int64_t day) {
     // 获取当前日期
     auto now = std::chrono::system_clock::now();
-    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-    std::tm current_date = *std::localtime(&now_time);
+    std::chrono::system_clock::time_point special_day = now + day * std::chrono::hours(24);
+    std::time_t special_time = std::chrono::system_clock::to_time_t(special_day);
+    std::tm special_date = *std::localtime(&special_time);
 
     // 调整当前日期到0点0分0秒
-    current_date.tm_hour = 0;
-    current_date.tm_min = 0;
-    current_date.tm_sec = 0;
+    special_date.tm_hour = 0;
+    special_date.tm_min = 0;
+    special_date.tm_sec = 0;
 
-    return current_date;
+    return special_date;
 }
 
 } // namespace doris
