@@ -50,6 +50,15 @@ struct TKafkaLoadInfo {
     4: optional map<string, string> properties;
 }
 
+struct TPulsarLoadInfo {
+    1: required string service_url;
+    2: required string topic;
+    3: required string subscription;
+    4: required list<string> partitions;
+    5: optional map<string, i64> initial_positions;
+    6: optional map<string, string> properties;
+}
+
 struct TRoutineLoadTask {
     1: required Types.TLoadSourceType type
     2: required i64 job_id
@@ -70,6 +79,7 @@ struct TRoutineLoadTask {
     17: optional bool memtable_on_sink_node;
     18: optional string qualified_user
     19: optional string cloud_cluster
+    20: optional TPulsarLoadInfo pulsar_load_info
 }
 
 struct TKafkaMetaProxyRequest {

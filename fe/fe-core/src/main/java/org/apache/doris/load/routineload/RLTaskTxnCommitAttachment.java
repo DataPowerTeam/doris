@@ -59,6 +59,9 @@ public class RLTaskTxnCommitAttachment extends TxnCommitAttachment {
             case KAFKA:
                 this.progress = new KafkaProgress(rlTaskTxnCommitAttachment.getKafkaRLTaskProgress());
                 break;
+            case PULSAR:
+                this.progress = new PulsarProgress(rlTaskTxnCommitAttachment.getPulsarRLTaskProgress());
+                break;
             default:
                 break;
         }
