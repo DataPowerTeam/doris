@@ -442,8 +442,14 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
 #endif
     }
 
+    std::shared_ptr<io::KafkaConsumerPipe> stream_pipe =
+            std::static_pointer_cast<io::KafkaConsumerPipe>(ctx->body_sink);
+    if (ctx->load_src_type == TLoadSourceType::PULSAR) {
+        stream_pipe = std::static_pointer_cast<io::PulsarConsumerPipe>(ctx->body_sink);
+    }
+
     // start to consume, this may block a while
-    HANDLE_ERROR(consumer_grp->start_all(ctx), "consuming failed");
+    HANDLE_ERROR(consumer_grp->start_all(ctx, stream_pipe), "consuming failed");
 
     if (ctx->is_multi_table) {
         // plan the rest of unplanned data
@@ -452,6 +458,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
                      "multi tables task executes plan error");
         // need memory order
         multi_table_pipe->handle_consume_finished();
+        HANDLE_ERROR(stream_pipe->finish(), "finish multi table task failed");
     }
 
     // wait for all consumers finished
@@ -467,6 +474,23 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     consumer_grp.get()->set_consumer_rows(0);
 
     ctx->load_cost_millis = UnixMillis() - ctx->start_millis;
+
+    if (ctx->load_src_type == TLoadSourceType::PULSAR) {
+        //do ack
+        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
+                            ->acknowledge_cumulative(ctx);
+        if (!st.ok()) {
+            LOG(WARNING) << st;
+        }
+        LOG(INFO) << "finish pulsar ack of consumer_grp";
+    }
+
+
+    // return the consumer back to pool
+    // call this before commit txn, in case the next task can come very fast
+    consumer_pool->return_consumers(consumer_grp.get());
+
+    LOG(INFO) << "finish return consumer_grp";
 
     // commit txn
     HANDLE_ERROR(_exec_env->stream_load_executor()->commit_txn(ctx.get()), "commit failed");
@@ -505,21 +529,9 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         }};
         break;
     }
-    case TLoadSourceType::PULSAR: {
-        //do ack
-        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
-                            ->acknowledge_cumulative(ctx);
-        if (!st.ok()) {
-            LOG(WARNING) << st;
-        }
-        break;
-    }
     default:
         break;
     }
-    // return the consumer back to pool
-    // call this before commit txn, in case the next task can come very fast
-    consumer_pool->return_consumers(consumer_grp.get());
     cb(ctx);
 }
 

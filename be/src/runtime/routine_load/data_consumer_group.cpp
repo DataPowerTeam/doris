@@ -74,7 +74,8 @@ KafkaDataConsumerGroup::~KafkaDataConsumerGroup() {
     DCHECK(_queue.get_size() == 0);
 }
 
-Status KafkaDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx) {
+Status KafkaDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx,
+                                         std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe) {
     Status result_st = Status::OK();
     // start all consumers
     for (auto& consumer : _consumers) {
@@ -106,9 +107,6 @@ Status KafkaDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx)
     int64_t left_time = ctx->max_interval_s * 1000;
     int64_t left_rows = ctx->max_batch_rows;
     int64_t left_bytes = ctx->max_batch_size;
-
-    std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe =
-            std::static_pointer_cast<io::KafkaConsumerPipe>(ctx->body_sink);
 
     LOG(INFO) << "start consumer group: " << _grp_id << ". max time(ms): " << left_time
               << ", batch rows: " << left_rows << ", batch size: " << left_bytes << ". "
@@ -244,7 +242,8 @@ PulsarDataConsumerGroup::~PulsarDataConsumerGroup() {
     DCHECK(_queue.get_size() == 0);
 }
 
-Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx) {
+Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx,
+                                          std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe) {
     Status result_st = Status::OK();
 
     int64_t diff_day = parse_diff_day_int(ctx);
@@ -285,9 +284,6 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     int64_t received_rows = 0;
     int64_t put_rows = 0;
     int64_t left_bytes = ctx->max_batch_size;
-
-    std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe =
-            std::static_pointer_cast<io::PulsarConsumerPipe>(ctx->body_sink);
 
     LOG(INFO) << "start consumer group: " << _grp_id << ". max time(ms): " << left_time
               << ", batch size: " << left_bytes << ". " << ctx->brief();
@@ -342,7 +338,9 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 return Status::InternalError("Cancelled");
             } else {
                 DCHECK(left_bytes < ctx->max_batch_size);
+                LOG(INFO) << "before pulsar_pipe finish.";
                 static_cast<void>(pulsar_pipe->finish());
+                LOG(INFO) << "after pulsar_pipe finish.";
                 ctx->pulsar_info->ack_offset = std::move(ack_offset);
                 ctx->receive_bytes = ctx->max_batch_size - left_bytes;
                 get_backlog_nums(ctx);

@@ -512,6 +512,7 @@ Status VTabletWriterV2::close(Status exec_status) {
         status = _send_new_partition_batch();
     }
 
+    LOG(INFO) << "VTabletWriterV2 before exec status is :" << status << ", load_id=" << print_id(_load_id);
     DBUG_EXECUTE_IF("VTabletWriterV2.close.cancel",
                     { status = Status::InternalError("load cancel"); });
     if (status.ok()) {

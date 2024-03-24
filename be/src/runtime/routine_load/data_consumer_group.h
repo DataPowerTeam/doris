@@ -45,8 +45,10 @@ class DataConsumerGroup {
 public:
     typedef std::function<void(const Status&)> ConsumeFinishCallback;
 
-    DataConsumerGroup()
-            : _grp_id(UniqueId::gen_uid()), _thread_pool(3, 10, "data_consumer"), _counter(0) {}
+    DataConsumerGroup(size_t consumer_num)
+            : _grp_id(UniqueId::gen_uid()),
+              _thread_pool(consumer_num, consumer_num, "data_consumer"),
+              _counter(0) {}
 
     virtual ~DataConsumerGroup() { _consumers.clear(); }
 
@@ -65,7 +67,8 @@ public:
     void set_consumer_rows(int64_t rows) { _rows = rows; }
 
     // start all consumers
-    virtual Status start_all(std::shared_ptr<StreamLoadContext> ctx) {
+    virtual Status start_all(std::shared_ptr<StreamLoadContext> ctx,
+                             std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe) {
         return Status::OK();
     }
 
@@ -87,11 +90,12 @@ protected:
 // for kafka
 class KafkaDataConsumerGroup : public DataConsumerGroup {
 public:
-    KafkaDataConsumerGroup() : DataConsumerGroup(), _queue(500) {}
+    KafkaDataConsumerGroup(size_t consumer_num) : DataConsumerGroup(consumer_num), _queue(500) {}
 
     virtual ~KafkaDataConsumerGroup();
 
-    Status start_all(std::shared_ptr<StreamLoadContext> ctx) override;
+    Status start_all(std::shared_ptr<StreamLoadContext> ctx,
+                     std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe) override;
     // assign topic partitions to all consumers equally
     Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
 
@@ -109,11 +113,12 @@ private:
 // for pulsar
 class PulsarDataConsumerGroup : public DataConsumerGroup {
 public:
-    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(1000) {}
+    PulsarDataConsumerGroup(size_t consumer_num) : DataConsumerGroup(consumer_num), _queue(500) {}
 
     ~PulsarDataConsumerGroup() override;
 
-    Status start_all(std::shared_ptr<StreamLoadContext> ctx) override;
+    Status start_all(std::shared_ptr<StreamLoadContext> ctx,
+                     std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe) override;
     // assign topic partitions to all consumers equally
     Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
 
