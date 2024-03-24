@@ -392,7 +392,7 @@ public class BackendServiceProxy {
     }
 
     public Future<InternalService.PPulsarProxyResult> getPulsarInfo(
-        TNetworkAddress address, InternalService.PPulsarProxyRequest request) throws RpcException {
+            TNetworkAddress address, InternalService.PPulsarProxyRequest request) throws RpcException {
         try {
             final BackendServiceClient client = getProxy(address);
             return client.getPulsarInfo(request);

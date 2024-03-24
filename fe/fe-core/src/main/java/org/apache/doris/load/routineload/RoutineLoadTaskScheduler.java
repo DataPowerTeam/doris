@@ -222,8 +222,8 @@ public class RoutineLoadTaskScheduler extends MasterDaemon {
             } else if (tRoutineLoadTask.isSetPulsarLoadInfo()) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("send pulsar routine load task {} with partitions: {}, job: {}",
-                        tRoutineLoadTask.label, tRoutineLoadTask.pulsar_load_info.partitions,
-                        tRoutineLoadTask.getJobId());
+                            tRoutineLoadTask.label, tRoutineLoadTask.pulsar_load_info.partitions,
+                            tRoutineLoadTask.getJobId());
                 }
             }
         } catch (LoadException e) {
