@@ -221,6 +221,12 @@ LIBRDKAFKA_NAME=librdkafka-1.9.2.tar.gz
 LIBRDKAFKA_SOURCE=librdkafka-1.9.2
 LIBRDKAFKA_MD5SUM="fe9624e905abbf8324b0f6be520d9c24"
 
+# pulsar
+PULSAR_DOWNLOAD="https://github.com/apache/pulsar-client-cpp/archive/refs/tags/v3.3.0.tar.gz"
+PULSAR_NAME=pulsar-client-3.3.0.tar.gz
+PULSAR_SOURCE=pulsar-client-cpp-3.3.0
+PULSAR_MD5SUM="348b7e5ec39e50547668520d13a417a1"
+
 # zstd
 ZSTD_DOWNLOAD="https://github.com/facebook/zstd/releases/download/v1.5.5/zstd-1.5.5.tar.gz"
 ZSTD_NAME=zstd-1.5.5.tar.gz
@@ -536,6 +542,7 @@ export TP_ARCHIVES=(
     'ROCKSDB'
     'CYRUS_SASL'
     'LIBRDKAFKA'
+    'PULSAR'
     'FLATBUFFERS'
     'ARROW'
     'BROTLI'

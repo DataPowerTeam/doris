@@ -60,9 +60,12 @@ public:
         ++_counter;
     }
 
+    int64_t get_consumer_rows() const { return _rows; }
+
+    void set_consumer_rows(int64_t rows) { _rows = rows; }
+
     // start all consumers
-    virtual Status start_all(std::shared_ptr<StreamLoadContext> ctx,
-                             std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe) {
+    virtual Status start_all(std::shared_ptr<StreamLoadContext> ctx) {
         return Status::OK();
     }
 
@@ -77,6 +80,8 @@ protected:
     // when the counter becomes zero, shutdown the queue to finish
     std::mutex _mutex;
     int _counter;
+    // received total rows
+    int64_t _rows {0};
 };
 
 // for kafka
@@ -86,8 +91,7 @@ public:
 
     virtual ~KafkaDataConsumerGroup();
 
-    Status start_all(std::shared_ptr<StreamLoadContext> ctx,
-                     std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe) override;
+    Status start_all(std::shared_ptr<StreamLoadContext> ctx) override;
     // assign topic partitions to all consumers equally
     Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
 
@@ -100,6 +104,59 @@ private:
 private:
     // blocking queue to receive msgs from all consumers
     BlockingQueue<RdKafka::Message*> _queue;
+};
+
+// for pulsar
+class PulsarDataConsumerGroup : public DataConsumerGroup {
+public:
+    PulsarDataConsumerGroup() : DataConsumerGroup(), _queue(1000) {}
+
+    ~PulsarDataConsumerGroup() override;
+
+    Status start_all(std::shared_ptr<StreamLoadContext> ctx) override;
+    // assign topic partitions to all consumers equally
+    Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
+
+    // acknowledge pulsar message
+    Status acknowledge_cumulative(std::shared_ptr<StreamLoadContext> ctx);
+
+private:
+    // start a single consumer
+    void actual_consume(const std::shared_ptr<DataConsumer>& consumer,
+                        BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms,
+                        std::vector<std::string> filter_event_ids, const ConsumeFinishCallback& cb);
+
+    void get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx);
+
+    std::string substring_prefix_json(std::string data);
+
+    size_t len_of_actual_data(const char* data);
+
+    std::vector<std::string> convert_rows(std::string& data, std::tm before_date, std::tm later_date);
+
+    std::string convert_map_to_struct(rapidjson::Value& map);
+
+    // acknowledge pulsar message
+    void acknowledge(pulsar::MessageId& message_id, std::string partition);
+
+    bool is_filter_event_ids(const std::string& data,
+                             const std::vector<std::string>& filter_event_ids);
+
+    std::vector<std::string> parse_event_ids_vector(std::shared_ptr<StreamLoadContext> ctx);
+
+    int64_t parse_diff_day_int(std::shared_ptr<StreamLoadContext> ctx);
+
+    bool isValidUTF8Char(const char c);
+
+    std::string removeNonUTF8Chars(const std::string& input);
+
+    bool isDateInRange(std::string& date_string, std::tm before_date, std::tm later_date);
+
+    std::tm getSpecialDate(int64_t day);
+
+private:
+    // blocking queue to receive msgs from all consumers
+    BlockingQueue<pulsar::Message*> _queue;
 };
 
 } // end namespace doris
