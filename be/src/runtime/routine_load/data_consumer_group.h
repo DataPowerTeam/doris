@@ -67,7 +67,8 @@ public:
     void set_consumer_rows(int64_t rows) { _rows = rows; }
 
     // start all consumers
-    virtual Status start_all(std::shared_ptr<StreamLoadContext> ctx) {
+    virtual Status start_all(std::shared_ptr<StreamLoadContext> ctx,
+                             std::shared_ptr<io::StreamLoadPipe> stream_pipe) {
         return Status::OK();
     }
 
@@ -93,7 +94,8 @@ public:
 
     virtual ~KafkaDataConsumerGroup();
 
-    Status start_all(std::shared_ptr<StreamLoadContext> ctx) override;
+    Status start_all(std::shared_ptr<StreamLoadContext> ctx,
+                     std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe) override;
     // assign topic partitions to all consumers equally
     Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
 
@@ -115,7 +117,8 @@ public:
 
     ~PulsarDataConsumerGroup() override;
 
-    Status start_all(std::shared_ptr<StreamLoadContext> ctx) override;
+    Status start_all(std::shared_ptr<StreamLoadContext> ctx,
+                     std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe) override;
     // assign topic partitions to all consumers equally
     Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
 
