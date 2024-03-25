@@ -68,7 +68,7 @@ public:
 
     // start all consumers
     virtual Status start_all(std::shared_ptr<StreamLoadContext> ctx,
-                             std::shared_ptr<io::StreamLoadPipe> stream_pipe) {
+                             std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe) {
         return Status::OK();
     }
 

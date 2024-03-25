@@ -448,20 +448,10 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
 #endif
     }
 
-    std::shared_ptr<io::StreamLoadPipe> stream_pipe;
-    switch (ctx->load_src_type) {
-        case TLoadSourceType::KAFKA: {
-            stream_pipe = std::static_pointer_cast<io::KafkaConsumerPipe>(ctx->body_sink);
-            break;
-        }
-        case TLoadSourceType::PULSAR: {
-            stream_pipe = std::static_pointer_cast<io::PulsarConsumerPipe>(ctx->body_sink);
-            break;
-        }
-        default: {
-            stream_pipe = std::static_pointer_cast<io::StreamLoadPipe>(ctx->body_sink);
-            break;
-        }
+    std::shared_ptr<io::KafkaConsumerPipe> stream_pipe =
+            std::static_pointer_cast<io::KafkaConsumerPipe>(ctx->body_sink);
+    if (ctx->load_src_type == TLoadSourceType::PULSAR) {
+        stream_pipe = std::static_pointer_cast<io::PulsarConsumerPipe>(ctx->body_sink);
     }
 
     // start to consume, this may block a while
