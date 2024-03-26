@@ -211,7 +211,7 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
                         }
                     }
                     PulsarTaskInfo pulsarTaskInfo = new PulsarTaskInfo(UUID.randomUUID(), id, partitions,
-                            initialPositions, maxBatchIntervalS * 2 * 1000, 0, isMultiTable());
+                            initialPositions, maxBatchIntervalS * 2 * 1000, isMultiTable());
                     LOG.debug("pulsar routine load task created: " + pulsarTaskInfo);
                     routineLoadTaskInfoList.add(pulsarTaskInfo);
                     result.add(pulsarTaskInfo);
