@@ -107,6 +107,7 @@ public:
             if (state->enable_pipeline_exec()) {
                 Status st = _writer->get_writer_status();
                 if (exec_status.ok()) {
+                    LOG(INFO) << "async_writer_sink exec_status is :" << exec_status << ", st is :" << st;
                     _writer->force_close(state->is_cancelled() ? Status::Cancelled("Cancelled")
                                                                : Status::Cancelled("force close"));
                 } else {
