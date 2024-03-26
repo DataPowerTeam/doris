@@ -448,20 +448,6 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     // start to consume, this may block a while
     HANDLE_ERROR(consumer_grp->start_all(ctx, kafka_pipe), "consuming failed");
 
-    if (ctx->is_multi_table) {
-        // plan the rest of unplanned data
-        auto multi_table_pipe = std::static_pointer_cast<io::MultiTablePipe>(ctx->body_sink);
-        HANDLE_ERROR(multi_table_pipe->request_and_exec_plans(),
-                     "multi tables task executes plan error");
-        // need memory order
-        multi_table_pipe->handle_consume_finished();
-        HANDLE_ERROR(kafka_pipe->finish(), "finish multi table task failed");
-    } else {
-        LOG(INFO) << "before pulsar_pipe finish.";
-        HANDLE_ERROR(kafka_pipe->finish(), "finish pulsar_pipe failed");
-        LOG(INFO) << "after pulsar_pipe finish.";
-    }
-
     // wait for all consumers finished
     HANDLE_ERROR(ctx->future.get(), "consume failed");
 
@@ -532,6 +518,20 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     }
     default:
         break;
+    }
+
+    if (ctx->is_multi_table) {
+        // plan the rest of unplanned data
+        auto multi_table_pipe = std::static_pointer_cast<io::MultiTablePipe>(ctx->body_sink);
+        HANDLE_ERROR(multi_table_pipe->request_and_exec_plans(),
+                     "multi tables task executes plan error");
+        // need memory order
+        multi_table_pipe->handle_consume_finished();
+        HANDLE_ERROR(kafka_pipe->finish(), "finish multi table task failed");
+    } else {
+        LOG(INFO) << "before pulsar_pipe finish.";
+        HANDLE_ERROR(kafka_pipe->finish(), "finish pulsar_pipe failed");
+        LOG(INFO) << "after pulsar_pipe finish.";
     }
     cb(ctx);
 }
