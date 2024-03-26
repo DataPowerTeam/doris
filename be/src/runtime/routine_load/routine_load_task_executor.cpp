@@ -481,6 +481,23 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
 
     ctx->load_cost_millis = UnixMillis() - ctx->start_millis;
 
+    if (ctx->load_src_type == TLoadSourceType::PULSAR) {
+        //do ack
+        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
+                            ->acknowledge_cumulative(ctx);
+        if (!st.ok()) {
+            LOG(WARNING) << st;
+        }
+        LOG(INFO) << "finish pulsar ack of consumer_grp";
+    }
+
+
+    // return the consumer back to pool
+    // call this before commit txn, in case the next task can come very fast
+    consumer_pool->return_consumers(consumer_grp.get());
+
+    LOG(INFO) << "finish return consumer_grp";
+
     // commit txn
     HANDLE_ERROR(_exec_env->stream_load_executor()->commit_txn(ctx.get()), "commit failed");
     // commit kafka offset
@@ -518,21 +535,9 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         }};
         break;
     }
-    case TLoadSourceType::PULSAR: {
-        //do ack
-        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
-                            ->acknowledge_cumulative(ctx);
-        if (!st.ok()) {
-            LOG(WARNING) << st;
-        }
-        break;
-    }
     default:
         break;
     }
-    // return the consumer back to pool
-    // call this before commit txn, in case the next task can come very fast
-    consumer_pool->return_consumers(consumer_grp.get());
     cb(ctx);
 }
 
