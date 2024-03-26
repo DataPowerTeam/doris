@@ -445,8 +445,6 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe =
             std::static_pointer_cast<io::KafkaConsumerPipe>(ctx->body_sink);
 
-    std::shared_ptr<io::StreamLoadPipe> temp_pipe = pipe;
-
     // start to consume, this may block a while
     HANDLE_ERROR(consumer_grp->start_all(ctx, kafka_pipe), "consuming failed");
 
@@ -458,6 +456,10 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         // need memory order
         multi_table_pipe->handle_consume_finished();
         HANDLE_ERROR(kafka_pipe->finish(), "finish multi table task failed");
+    } else {
+        LOG(INFO) << "before pulsar_pipe finish.";
+        HANDLE_ERROR(kafka_pipe->finish(), "finish pulsar_pipe failed");
+        LOG(INFO) << "after pulsar_pipe finish.";
     }
 
     // wait for all consumers finished
