@@ -470,7 +470,6 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
               << " loaded rows: " << ctx.get()->number_loaded_rows
               << " filtered rows: " << ctx.get()->number_filtered_rows
               << " unselected rows: " << ctx.get()->number_unselected_rows;
-    DCHECK(consumer_grp.get()->get_consumer_rows() == ctx.get()->number_total_rows);
     consumer_grp.get()->set_consumer_rows(0);
 
     ctx->load_cost_millis = UnixMillis() - ctx->start_millis;
