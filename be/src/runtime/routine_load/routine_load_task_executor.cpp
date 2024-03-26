@@ -448,6 +448,16 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     // start to consume, this may block a while
     HANDLE_ERROR(consumer_grp->start_all(ctx, kafka_pipe), "consuming failed");
 
+    if (ctx->is_multi_table) {
+        // plan the rest of unplanned data
+        auto multi_table_pipe = std::static_pointer_cast<io::MultiTablePipe>(ctx->body_sink);
+        HANDLE_ERROR(multi_table_pipe->request_and_exec_plans(),
+                     "multi tables task executes plan error");
+        // need memory order
+        multi_table_pipe->handle_consume_finished();
+        HANDLE_ERROR(stream_pipe->finish(), "finish multi table task failed");
+    }
+
     // wait for all consumers finished
     HANDLE_ERROR(ctx->future.get(), "consume failed");
 
@@ -461,23 +471,6 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     consumer_grp.get()->set_consumer_rows(0);
 
     ctx->load_cost_millis = UnixMillis() - ctx->start_millis;
-
-    if (ctx->load_src_type == TLoadSourceType::PULSAR) {
-        //do ack
-        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
-                            ->acknowledge_cumulative(ctx);
-        if (!st.ok()) {
-            LOG(WARNING) << st;
-        }
-        LOG(INFO) << "finish pulsar ack of consumer_grp";
-    }
-
-
-    // return the consumer back to pool
-    // call this before commit txn, in case the next task can come very fast
-    consumer_pool->return_consumers(consumer_grp.get());
-
-    LOG(INFO) << "finish return consumer_grp";
 
     // commit txn
     HANDLE_ERROR(_exec_env->stream_load_executor()->commit_txn(ctx.get()), "commit failed");
@@ -516,23 +509,22 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         }};
         break;
     }
+    case TLoadSourceType::PULSAR: {
+        //do ack
+        Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
+                            ->acknowledge_cumulative(ctx);
+        if (!st.ok()) {
+            LOG(WARNING) << st;
+        }
+        LOG(INFO) << "finish pulsar ack of consumer_grp";
+        break;
+    }
     default:
         break;
     }
-
-    if (ctx->is_multi_table) {
-        // plan the rest of unplanned data
-        auto multi_table_pipe = std::static_pointer_cast<io::MultiTablePipe>(ctx->body_sink);
-        HANDLE_ERROR(multi_table_pipe->request_and_exec_plans(),
-                     "multi tables task executes plan error");
-        // need memory order
-        multi_table_pipe->handle_consume_finished();
-        HANDLE_ERROR(kafka_pipe->finish(), "finish multi table task failed");
-    } else {
-        LOG(INFO) << "before pulsar_pipe finish.";
-        HANDLE_ERROR(kafka_pipe->finish(), "finish pulsar_pipe failed");
-        LOG(INFO) << "after pulsar_pipe finish.";
-    }
+    // return the consumer back to pool
+    // call this before commit txn, in case the next task can come very fast
+    consumer_pool->return_consumers(consumer_grp.get());
     cb(ctx);
 }
 
