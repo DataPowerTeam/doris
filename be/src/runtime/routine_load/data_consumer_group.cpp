@@ -243,7 +243,7 @@ PulsarDataConsumerGroup::~PulsarDataConsumerGroup() {
 }
 
 Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx,
-                                          std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe) {
+                                          std::shared_ptr<io::KafkaConsumerPipe> pulsar_pipe) {
     Status result_st = Status::OK();
 
     int64_t diff_day = parse_diff_day_int(ctx);

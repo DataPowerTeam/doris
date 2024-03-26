@@ -69,6 +69,7 @@ public:
     }
 
     Status open(RuntimeState* state) override {
+        LOG(INFO) << "async_writer_sink open , state is :" << state;
         // Prepare the exprs to run.
         RETURN_IF_ERROR(VExpr::open(_output_vexpr_ctxs, state));
         if (state->enable_pipeline_exec()) {
@@ -81,6 +82,7 @@ public:
 
     // Non-pipeline engine will call this api to send data to sink destination
     Status send(RuntimeState* state, vectorized::Block* block, bool eos = false) override {
+        LOG(INFO) << "async_writer_sink send, state is :" << state;
         SCOPED_TIMER(_exec_timer);
         COUNTER_UPDATE(_blocks_sent_counter, 1);
         COUNTER_UPDATE(_output_rows_counter, block->rows());
@@ -95,6 +97,7 @@ public:
 
     // Pipeline engine will call this api to send data to destination. This is an async API.
     Status sink(RuntimeState* state, vectorized::Block* block, bool eos = false) override {
+        LOG(INFO) << "async_writer_sink sink, state is :" << state;
         return _writer->sink(block, eos);
     }
 

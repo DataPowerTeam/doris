@@ -118,7 +118,7 @@ public:
     ~PulsarDataConsumerGroup() override;
 
     Status start_all(std::shared_ptr<StreamLoadContext> ctx,
-                     std::shared_ptr<io::PulsarConsumerPipe> pulsar_pipe) override;
+                     std::shared_ptr<io::KafkaConsumerPipe> pulsar_pipe) override;
     // assign topic partitions to all consumers equally
     Status assign_topic_partitions(std::shared_ptr<StreamLoadContext> ctx);
 

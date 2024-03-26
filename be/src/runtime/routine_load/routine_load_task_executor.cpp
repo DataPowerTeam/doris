@@ -442,14 +442,11 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
 #endif
     }
 
-    std::shared_ptr<io::KafkaConsumerPipe> stream_pipe =
+    std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe =
             std::static_pointer_cast<io::KafkaConsumerPipe>(ctx->body_sink);
-    if (ctx->load_src_type == TLoadSourceType::PULSAR) {
-        stream_pipe = std::static_pointer_cast<io::PulsarConsumerPipe>(ctx->body_sink);
-    }
 
     // start to consume, this may block a while
-    HANDLE_ERROR(consumer_grp->start_all(ctx, stream_pipe), "consuming failed");
+    HANDLE_ERROR(consumer_grp->start_all(ctx, kafka_pipe), "consuming failed");
 
     if (ctx->is_multi_table) {
         // plan the rest of unplanned data
@@ -458,7 +455,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
                      "multi tables task executes plan error");
         // need memory order
         multi_table_pipe->handle_consume_finished();
-        HANDLE_ERROR(stream_pipe->finish(), "finish multi table task failed");
+        HANDLE_ERROR(kafka_pipe->finish(), "finish multi table task failed");
     }
 
     // wait for all consumers finished
