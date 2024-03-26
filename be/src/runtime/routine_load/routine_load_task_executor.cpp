@@ -455,7 +455,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
                      "multi tables task executes plan error");
         // need memory order
         multi_table_pipe->handle_consume_finished();
-        HANDLE_ERROR(stream_pipe->finish(), "finish multi table task failed");
+        HANDLE_ERROR(kafka_pipe->finish(), "finish multi table task failed");
     }
 
     // wait for all consumers finished
