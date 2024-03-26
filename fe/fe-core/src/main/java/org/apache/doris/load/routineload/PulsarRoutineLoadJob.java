@@ -109,20 +109,20 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
         super(-1, LoadDataSourceType.PULSAR);
     }
 
-    public PulsarRoutineLoadJob(Long id, String name, String clusterName, long dbId, long tableId,
+    public PulsarRoutineLoadJob(Long id, String name, long dbId, long tableId,
                                 String serviceUrl, String topic, String subscription,
                                 UserIdentity userIdentity) {
-        super(id, name, clusterName, dbId, tableId, LoadDataSourceType.PULSAR, userIdentity);
+        super(id, name, dbId, tableId, LoadDataSourceType.PULSAR, userIdentity);
         this.serviceUrl = serviceUrl;
         this.topic = topic;
         this.subscription = subscription;
         this.progress = new PulsarProgress();
     }
 
-    public PulsarRoutineLoadJob(Long id, String name, String clusterName, long dbId,
+    public PulsarRoutineLoadJob(Long id, String name, long dbId,
                                 String serviceUrl, String topic, String subscription,
                                 UserIdentity userIdentity, boolean isMultiTable) {
-        super(id, name, clusterName, dbId, LoadDataSourceType.PULSAR, userIdentity);
+        super(id, name, dbId, LoadDataSourceType.PULSAR, userIdentity);
         this.serviceUrl = serviceUrl;
         this.topic = topic;
         this.subscription = subscription;
@@ -210,9 +210,8 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
                             }
                         }
                     }
-                    PulsarTaskInfo pulsarTaskInfo = new PulsarTaskInfo(UUID.randomUUID(), id,
-                            clusterName, partitions,
-                            initialPositions, maxBatchIntervalS * 2 * 1000, isMultiTable());
+                    PulsarTaskInfo pulsarTaskInfo = new PulsarTaskInfo(UUID.randomUUID(), id, partitions,
+                            initialPositions, maxBatchIntervalS * 2 * 1000, 0, isMultiTable());
                     LOG.debug("pulsar routine load task created: " + pulsarTaskInfo);
                     routineLoadTaskInfoList.add(pulsarTaskInfo);
                     result.add(pulsarTaskInfo);
@@ -404,14 +403,14 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
         PulsarDataSourceProperties pulsarProperties = (PulsarDataSourceProperties) stmt.getDataSourceProperties();
         PulsarRoutineLoadJob pulsarRoutineLoadJob;
         if (pulsarProperties.isMultiTable()) {
-            pulsarRoutineLoadJob = new PulsarRoutineLoadJob(id, stmt.getName(), db.getClusterName(), db.getId(),
+            pulsarRoutineLoadJob = new PulsarRoutineLoadJob(id, stmt.getName(), db.getId(),
                 pulsarProperties.getPulsarServiceUrl(), pulsarProperties.getPulsarTopic(),
                 pulsarProperties.getPulsarSubscription(), stmt.getUserInfo(), true);
         } else {
             OlapTable olapTable = db.getOlapTableOrDdlException(stmt.getTableName());
             checkMeta(olapTable, stmt.getRoutineLoadDesc());
             long tableId = olapTable.getId();
-            pulsarRoutineLoadJob = new PulsarRoutineLoadJob(id, stmt.getName(), db.getClusterName(), db.getId(),
+            pulsarRoutineLoadJob = new PulsarRoutineLoadJob(id, stmt.getName(), db.getId(),
                 tableId, pulsarProperties.getPulsarServiceUrl(), pulsarProperties.getPulsarTopic(),
                 pulsarProperties.getPulsarSubscription(), stmt.getUserInfo());
         }
