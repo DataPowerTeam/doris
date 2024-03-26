@@ -406,7 +406,7 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        pipe = std::make_shared<io::PulsarConsumerPipe>();
+        pipe = std::make_shared<io::KafkaConsumerPipe>();
         Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
                             ->assign_topic_partitions(ctx);
         if (!st.ok()) {
@@ -445,6 +445,8 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe =
             std::static_pointer_cast<io::KafkaConsumerPipe>(ctx->body_sink);
 
+    std::shared_ptr<io::StreamLoadPipe> temp_pipe = pipe;
+
     // start to consume, this may block a while
     HANDLE_ERROR(consumer_grp->start_all(ctx, kafka_pipe), "consuming failed");
 
@@ -466,7 +468,8 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
               << " load total rows: " << ctx.get()->number_total_rows
               << " loaded rows: " << ctx.get()->number_loaded_rows
               << " filtered rows: " << ctx.get()->number_filtered_rows
-              << " unselected rows: " << ctx.get()->number_unselected_rows;
+              << " unselected rows: " << ctx.get()->number_unselected_rows
+              << " pipe: " << kafka_pipe;
     consumer_grp.get()->set_consumer_rows(0);
 
     ctx->load_cost_millis = UnixMillis() - ctx->start_millis;
