@@ -337,13 +337,15 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                 pulsar_pipe->cancel("Cancelled");
                 return Status::InternalError("Cancelled");
             } else {
+                LOG(INFO) << "before get_backlog_nums finish.";
+                get_backlog_nums(ctx);
+                LOG(INFO) << "before get_backlog_nums finish.";
                 DCHECK(left_bytes < ctx->max_batch_size);
                 LOG(INFO) << "before pulsar_pipe finish.";
                 static_cast<void>(pulsar_pipe->finish());
                 LOG(INFO) << "after pulsar_pipe finish.";
                 ctx->pulsar_info->ack_offset = std::move(ack_offset);
                 ctx->receive_bytes = ctx->max_batch_size - left_bytes;
-                get_backlog_nums(ctx);
                 return Status::OK();
             }
         }
