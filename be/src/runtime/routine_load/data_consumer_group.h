@@ -113,7 +113,7 @@ private:
 // for pulsar
 class PulsarDataConsumerGroup : public DataConsumerGroup {
 public:
-    PulsarDataConsumerGroup(size_t consumer_num) : DataConsumerGroup(consumer_num), _queue(500) {}
+    PulsarDataConsumerGroup(size_t consumer_num) : DataConsumerGroup(consumer_num + 3), _queue(500) {}
 
     ~PulsarDataConsumerGroup() override;
 

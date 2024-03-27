@@ -1420,6 +1420,7 @@ void VTabletWriter::_do_try_close(RuntimeState* state, const Status& exec_status
     }
 
     if (!status.ok()) {
+        LOG(INFO) << "1_VTabletWriter::_do_try_close _cancel_all_channel";
         _cancel_all_channel(status);
         _close_status = status;
         _close_wait = true;
@@ -1428,17 +1429,23 @@ void VTabletWriter::_do_try_close(RuntimeState* state, const Status& exec_status
 
 Status VTabletWriter::close(Status exec_status) {
     if (!_inited) {
+        LOG(INFO) << "1_exec_status : " << exec_status;
         DCHECK(!exec_status.ok());
+        LOG(INFO) << "1_VTabletWriter::close _cancel_all_channel";
         _cancel_all_channel(exec_status);
         _close_status = exec_status;
         return _close_status;
     }
 
+    LOG(INFO) << "2_exec_status : " << exec_status;
     SCOPED_TIMER(_close_timer);
     SCOPED_TIMER(_profile->total_time_counter());
 
+    LOG(INFO) << "3_exec_status : " << exec_status;
     // will make the last batch of request-> close_wait will wait this finished.
     _do_try_close(_state, exec_status);
+
+    LOG(INFO) << "1__close_status : " << _close_status;
 
     // If _close_status is not ok, all nodes have been canceled in try_close.
     if (_close_status.ok()) {
@@ -1456,6 +1463,7 @@ Status VTabletWriter::close(Status exec_status) {
         int64_t num_node_channels = 0;
         VNodeChannelStat channel_stat;
 
+        LOG(INFO) << "1_status : " << status;
         for (const auto& index_channel : _channels) {
             if (!status.ok()) {
                 break;
@@ -1485,6 +1493,7 @@ Status VTabletWriter::close(Status exec_status) {
                                         &total_add_batch_num);
                     });
 
+            LOG(INFO) << "2_status : " << status;
             // Due to the non-determinism of compaction, the rowsets of each replica may be different from each other on different
             // BE nodes. The number of rows filtered in SegmentWriter depends on the historical rowsets located in the correspoding
             // BE node. So we check the number of rows filtered on each succeccful BE to ensure the consistency of the current load
@@ -1507,6 +1516,7 @@ Status VTabletWriter::close(Status exec_status) {
             }
         } // end for index channels
 
+        LOG(INFO) << "3_status : " << status;
         if (status.ok()) {
             // TODO need to be improved
             LOG(INFO) << "total mem_exceeded_block_ns=" << channel_stat.mem_exceeded_block_ns
@@ -1558,6 +1568,7 @@ Status VTabletWriter::close(Status exec_status) {
             }
             LOG(INFO) << ss.str();
         } else {
+            LOG(INFO) << "2_VTabletWriter::close _cancel_all_channel";
             _cancel_all_channel(status);
         }
         _close_status = status;

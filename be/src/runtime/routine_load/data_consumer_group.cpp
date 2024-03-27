@@ -251,8 +251,8 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     std::tm before_date = getSpecialDate(-1 * diff_day);
     std::vector<std::string> filter_event_ids = parse_event_ids_vector(ctx);
     LOG(INFO) << "group _consumers size is: " << _consumers.size()
-              << "filter_event_ids size is: " << filter_event_ids.size()
-              << "diff_day is: " << diff_day;
+              << ", filter_event_ids size is: " << filter_event_ids.size()
+              << ", diff_day is: " << diff_day;
 
     // start all consumers
     for (auto& consumer : _consumers) {
@@ -433,6 +433,7 @@ void PulsarDataConsumerGroup::get_backlog_nums(std::shared_ptr<StreamLoadContext
         if (!st.ok()) {
             LOG(WARNING) << st.to_string();
         } else {
+            LOG(INFO) << "consumer id : " << consumer.id() << ", backlog_num: " << backlog_num;
             ctx->pulsar_info
                     ->partition_backlog[std::static_pointer_cast<PulsarDataConsumer>(consumer)
                                                 ->get_partition()] = backlog_num;
