@@ -211,16 +211,7 @@ public class AuditLoaderPlugin extends Plugin implements AuditPlugin {
         if (logBuffer.length() >= conf.maxBatchSize || currentTime - lastLoadTime >= conf.maxBatchIntervalSec * 1000) {         
             // begin to load
             try {
-                String token = "";
-                if (conf.use_auth_token) {
-                    try {
-                        // Acquire token from master
-                        token = Env.getCurrentEnv().getLoadManager().getTokenManager().acquireToken();
-                    } catch (Exception e) {
-                        LOG.error("Failed to get auth token: {}", e);
-                    }
-                }
-                DorisStreamLoader.LoadResponse response = loader.loadBatch(logBuffer, slowLog, token);
+                DorisStreamLoader.LoadResponse response = loader.loadBatch(logBuffer, slowLog);
                 LOG.debug("audit loader response: {}", response);
             } catch (Exception e) {
                 LOG.debug("encounter exception when putting current audit batch, discard current batch", e);
