@@ -313,9 +313,15 @@ Status RoutineLoadTaskExecutor::submit_task(const TRoutineLoadTask& task) {
     tstatus.status_code = TStatusCode::OK;
     put_result.status = tstatus;
     if (task.__isset.params) {
-        put_result.params = task.params;
-        put_result.__isset.params = true;
-        LOG(INFO) << "params:put_result.__isset.params = true;";
+        if (task.type == TLoadSourceType::PULSAR) {
+            put_result.pipeline_params = task.pipeline_params;
+            put_result.__isset.pipeline_params = true;
+            LOG(INFO) << "pipeline_params:put_result.__isset.pipeline_params = true;";
+        } else {
+            put_result.params = task.params;
+            put_result.__isset.params = true;
+            LOG(INFO) << "params:put_result.__isset.params = true;";
+        }
     } else {
         put_result.pipeline_params = task.pipeline_params;
         put_result.__isset.pipeline_params = true;
