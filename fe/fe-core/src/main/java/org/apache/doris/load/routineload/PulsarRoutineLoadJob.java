@@ -273,10 +273,12 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
 
         // Running here, the status of the transaction should be ABORTED,
         // and it is caused by other errors. In this case, we should not update the position.
-        LOG.debug("no need to update the progress of pulsar routine load. txn status: {}, "
-                + "txnStatusChangeReason: {}, task: {}, job: {}",
-                txnState.getTransactionStatus(), txnStatusChangeReason,
-                DebugUtil.printId(rlTaskTxnCommitAttachment.getTaskId()), id);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("no need to update the progress of pulsar routine load. txn status: {}, "
+                    + "txnStatusChangeReason: {}, task: {}, job: {}",
+                    txnState.getTransactionStatus(), txnStatusChangeReason,
+                    DebugUtil.printId(rlTaskTxnCommitAttachment.getTaskId()), id);
+        }
         return false;
     }
 
@@ -679,6 +681,6 @@ public class PulsarRoutineLoadJob extends RoutineLoadJob {
 
     @Override
     public double getMaxFilterRatio() {
-        return 1.0;
+        return maxFilterRatio;
     }
 }

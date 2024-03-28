@@ -313,15 +313,9 @@ Status RoutineLoadTaskExecutor::submit_task(const TRoutineLoadTask& task) {
     tstatus.status_code = TStatusCode::OK;
     put_result.status = tstatus;
     if (task.__isset.params) {
-        if (task.type == TLoadSourceType::PULSAR) {
-            put_result.pipeline_params = task.pipeline_params;
-            put_result.__isset.pipeline_params = true;
-            LOG(INFO) << "pipeline_params:put_result.__isset.pipeline_params = true;";
-        } else {
-            put_result.params = task.params;
-            put_result.__isset.params = true;
-            LOG(INFO) << "params:put_result.__isset.params = true;";
-        }
+        put_result.params = task.params;
+        put_result.__isset.params = true;
+        LOG(INFO) << "params:put_result.__isset.params = true;";
     } else {
         put_result.pipeline_params = task.pipeline_params;
         put_result.__isset.pipeline_params = true;
@@ -414,7 +408,12 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
         break;
     }
     case TLoadSourceType::PULSAR: {
-        pipe = std::make_shared<io::KafkaConsumerPipe>();
+        if (ctx->is_multi_table) {
+            LOG(INFO) << "recv single-stream-multi-table request, ctx=" << ctx->brief();
+            pipe = std::make_shared<io::MultiTablePipe>(ctx);
+        } else {
+            pipe = std::make_shared<io::KafkaConsumerPipe>();
+        }
         Status st = std::static_pointer_cast<PulsarDataConsumerGroup>(consumer_grp)
                             ->assign_topic_partitions(ctx);
         if (!st.ok()) {
