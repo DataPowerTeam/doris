@@ -254,7 +254,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                     ctx->max_interval_s * 1000, [this, &result_st](const Status& st) {
                          std::unique_lock<std::mutex> lock(_mutex);
                          _counter--;
-                         VLOG(1) << "group counter is: " << _counter << ", grp: " << _grp_id;
+                         VLOG_CRITICAL << "group counter is: " << _counter << ", grp: " << _grp_id;
                          if (_counter == 0) {
                              _queue.shutdown();
                              LOG(INFO) << "all consumers are finished. shutdown queue. group id: "
@@ -268,7 +268,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                          << ", group id: " << _grp_id;
             return Status::InternalError("failed to submit data consumer");
         } else {
-            VLOG(1) << "submit a data consumer: " << consumer->id() << ", group id: " << _grp_id;
+            VLOG_CRITICAL << "submit a data consumer: " << consumer->id() << ", group id: " << _grp_id;
         }
     }
 
@@ -392,8 +392,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
 void PulsarDataConsumerGroup::actual_consume(std::shared_ptr<DataConsumer>& consumer,
                                              BlockingQueue<pulsar::Message*>* queue,
-                                             int64_t max_running_time_ms,
-                                             ConsumeFinishCallback& cb) {
+                                             int64_t max_running_time_ms, ConsumeFinishCallback& cb) {
     Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->group_consume(
             queue, max_running_time_ms);
     cb(st);
