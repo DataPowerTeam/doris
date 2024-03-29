@@ -251,7 +251,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     for (auto& consumer : _consumers) {
         if (!_thread_pool.offer(
                     [this, consumer, capture0 = &_queue, capture1 = ctx->max_interval_s * 1000,
-                     capture2 = filter_event_ids, capture3 = [this, &result_st](const Status& st) {
+                     capture2 = [this, &result_st](const Status& st) {
                          std::unique_lock<std::mutex> lock(_mutex);
                          _counter--;
                          VLOG(1) << "group counter is: " << _counter << ", grp: " << _grp_id;
@@ -263,7 +263,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                          if (result_st.ok() && !st.ok()) {
                              result_st = st;
                          }
-                     }] { actual_consume(consumer, capture0, capture1, capture2, capture3); })) {
+                     }] { actual_consume(consumer, capture0, capture1, capture2); })) {
             LOG(WARNING) << "failed to submit data consumer: " << consumer->id()
                          << ", group id: " << _grp_id;
             return Status::InternalError("failed to submit data consumer");
@@ -390,11 +390,10 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
     return Status::OK();
 }
 
-void PulsarDataConsumerGroup::actual_consume(const std::shared_ptr<DataConsumer>& consumer,
+void PulsarDataConsumerGroup::actual_consume(std::shared_ptr<DataConsumer>& consumer,
                                              BlockingQueue<pulsar::Message*>* queue,
                                              int64_t max_running_time_ms,
-                                             std::vector<std::string> filter_event_ids,
-                                             const ConsumeFinishCallback& cb) {
+                                             ConsumeFinishCallback& cb) {
     Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->group_consume(
             queue, filter_event_ids, max_running_time_ms);
     cb(st);

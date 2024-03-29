@@ -121,15 +121,11 @@ public:
 
 private:
     // start a single consumer
-    void actual_consume(const std::shared_ptr<DataConsumer>& consumer,
+    void actual_consume(std::shared_ptr<DataConsumer>& consumer,
                         BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms,
-                        std::vector<std::string> filter_event_ids, const ConsumeFinishCallback& cb);
+                        ConsumeFinishCallback& cb);
 
     void get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx);
-
-    std::string substring_prefix_json(std::string data);
-
-    size_t len_of_actual_data(const char* data);
 
     // acknowledge pulsar message
     void acknowledge(pulsar::MessageId& message_id, std::string partition);
