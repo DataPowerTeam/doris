@@ -392,7 +392,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
 void PulsarDataConsumerGroup::actual_consume(std::shared_ptr<DataConsumer>& consumer,
                                              BlockingQueue<pulsar::Message*>* queue,
-                                             int64_t max_running_time_ms, ConsumeFinishCallback& cb) {
+                                             int64_t max_running_time_ms, ConsumeFinishCallback cb) {
     Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->group_consume(
             queue, max_running_time_ms);
     cb(st);

@@ -123,7 +123,7 @@ private:
     // start a single consumer
     void actual_consume(std::shared_ptr<DataConsumer>& consumer,
                         BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms,
-                        ConsumeFinishCallback& cb);
+                        ConsumeFinishCallback cb);
 
     void get_backlog_nums(std::shared_ptr<StreamLoadContext> ctx);
 
