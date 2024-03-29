@@ -469,13 +469,11 @@ void RoutineLoadTaskExecutor::exec_task(std::shared_ptr<StreamLoadContext> ctx,
     HANDLE_ERROR(ctx->future.get(), "consume failed");
 
     // check received and load rows
-    LOG(INFO) << "routine load task received rows: " << consumer_grp.get()->get_consumer_rows()
-              << " load total rows: " << ctx.get()->number_total_rows
+    LOG(INFO) << " load total rows: " << ctx.get()->number_total_rows
               << " loaded rows: " << ctx.get()->number_loaded_rows
               << " filtered rows: " << ctx.get()->number_filtered_rows
               << " unselected rows: " << ctx.get()->number_unselected_rows
               << " pipe: " << kafka_pipe;
-    consumer_grp.get()->set_consumer_rows(0);
 
     ctx->load_cost_millis = UnixMillis() - ctx->start_millis;
 

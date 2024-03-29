@@ -62,10 +62,6 @@ public:
         ++_counter;
     }
 
-    int64_t get_consumer_rows() const { return _rows; }
-
-    void set_consumer_rows(int64_t rows) { _rows = rows; }
-
     // start all consumers
     virtual Status start_all(std::shared_ptr<StreamLoadContext> ctx,
                              std::shared_ptr<io::KafkaConsumerPipe> kafka_pipe) {
@@ -83,8 +79,6 @@ protected:
     // when the counter becomes zero, shutdown the queue to finish
     std::mutex _mutex;
     int _counter;
-    // received total rows
-    int64_t _rows {0};
 };
 
 // for kafka
@@ -137,27 +131,8 @@ private:
 
     size_t len_of_actual_data(const char* data);
 
-    std::vector<std::string> convert_rows(std::string& data, std::tm before_date, std::tm later_date);
-
-    std::string convert_map_to_struct(rapidjson::Value& map);
-
     // acknowledge pulsar message
     void acknowledge(pulsar::MessageId& message_id, std::string partition);
-
-    bool is_filter_event_ids(const std::string& data,
-                             const std::vector<std::string>& filter_event_ids);
-
-    std::vector<std::string> parse_event_ids_vector(std::shared_ptr<StreamLoadContext> ctx);
-
-    int64_t parse_diff_day_int(std::shared_ptr<StreamLoadContext> ctx);
-
-    bool isValidUTF8Char(const char c);
-
-    std::string removeNonUTF8Chars(const std::string& input);
-
-    bool isDateInRange(std::string& date_string, std::tm before_date, std::tm later_date);
-
-    std::tm getSpecialDate(int64_t day);
 
 private:
     // blocking queue to receive msgs from all consumers

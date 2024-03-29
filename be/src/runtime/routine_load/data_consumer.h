@@ -201,8 +201,7 @@ public:
     Status acknowledge(pulsar::MessageId& message_id, std::string partition);
 
     // start the consumer and put msgs to queue
-    Status group_consume(BlockingQueue<pulsar::Message*>* queue,
-                         std::vector<std::string> filter_event_ids, int64_t max_running_time_ms);
+    Status group_consume(BlockingQueue<pulsar::Message*>* queue, int64_t max_running_time_ms);
 
     // get the partitions of the topic
     Status get_topic_partition(std::vector<std::string>* partitions);
@@ -211,9 +210,6 @@ public:
     Status get_partition_backlog(int64_t* backlog);
 
     const std::string& get_partition();
-
-    bool is_filter_event_ids(const std::string& data,
-                             const std::vector<std::string>& filter_event_ids);
 
 private:
     std::string _service_url;

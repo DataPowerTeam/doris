@@ -524,12 +524,10 @@ Status PulsarDataConsumer::assign_partition(const std::string& partition,
 }
 
 Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
-                                         std::vector<std::string> filter_event_ids,
                                          int64_t max_running_time_ms) {
     _last_visit_time = time(nullptr);
     int64_t left_time = max_running_time_ms;
     LOG(INFO) << "start pulsar consumer: " << _id << ", grp: " << _grp_id
-              << ",filter_event_ids size: " << filter_event_ids.size()
               << ", max running time(ms): " << left_time;
 
     int64_t received_rows = 0;
@@ -551,7 +549,6 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
         if (left_time <= 0) {
             break;
         }
-        bool is_filter = true;
         bool done = false;
         auto msg = std::make_unique<pulsar::Message>();
         // consume 1 message at a time
@@ -569,16 +566,11 @@ Status PulsarDataConsumer::group_consume(BlockingQueue<pulsar::Message*>* queue,
                           << ", pulsar consumer: " << _id << ", grp: " << _grp_id
                           << ", topic name: " << _topic_name;
             }
-            is_filter = is_filter_event_ids(message_str, filter_event_ids);
-            if (is_filter) {
-                if (!queue->blocking_put(msg.get())) {
-                    // queue is shutdown
-                    done = true;
-                } else {
-                    ++put_rows;
-                }
+            if (!queue->blocking_put(msg.get())) {
+                // queue is shutdown
+                done = true;
             } else {
-                delete msg.get();
+                ++put_rows;
             }
             ++received_rows;
             msg.release(); // release the ownership, msg will be deleted after being processed
@@ -721,19 +713,6 @@ bool PulsarDataConsumer::match(std::shared_ptr<StreamLoadContext> ctx) {
     }
 
     return true;
-}
-
-bool PulsarDataConsumer::is_filter_event_ids(const std::string& data,
-                                             const std::vector<std::string>& filter_event_ids) {
-    if (filter_event_ids.empty()) {
-        return true;
-    }
-    for (std::string event_id : filter_event_ids) {
-        if (data.find(event_id) != std::string::npos) {
-            return true;
-        }
-    }
-    return false;
 }
 
 } // end namespace doris
