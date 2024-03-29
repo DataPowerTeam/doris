@@ -249,9 +249,9 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
 
     // start all consumers
     for (auto& consumer : _consumers) {
-        if (!_thread_pool.offer(
-                    [this, consumer, capture0 = &_queue, capture1 = ctx->max_interval_s * 1000,
-                     capture2 = [this, &result_st](const Status& st) {
+        if (!_thread_pool.offer(std::bind<void>(
+                    &PulsarDataConsumerGroup::actual_consume, this, consumer, &_queue,
+                    ctx->max_interval_s * 1000, [this, &result_st](const Status& st) {
                          std::unique_lock<std::mutex> lock(_mutex);
                          _counter--;
                          VLOG(1) << "group counter is: " << _counter << ", grp: " << _grp_id;
@@ -263,7 +263,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
                          if (result_st.ok() && !st.ok()) {
                              result_st = st;
                          }
-                     }] { actual_consume(consumer, capture0, capture1, capture2); })) {
+                     }))) {
             LOG(WARNING) << "failed to submit data consumer: " << consumer->id()
                          << ", group id: " << _grp_id;
             return Status::InternalError("failed to submit data consumer");
@@ -359,7 +359,7 @@ Status PulsarDataConsumerGroup::start_all(std::shared_ptr<StreamLoadContext> ctx
             if (st.ok()) {
                 received_rows++;
                 put_rows++;
-                left_bytes -= row_len;
+                left_bytes -= len;
                 // len of receive origin message from pulsar
                 if (ack_offset[partition] >= msg_id) {
                     LOG(WARNING) << "find repeated message id: " << msg_id;
@@ -395,7 +395,7 @@ void PulsarDataConsumerGroup::actual_consume(std::shared_ptr<DataConsumer>& cons
                                              int64_t max_running_time_ms,
                                              ConsumeFinishCallback& cb) {
     Status st = std::static_pointer_cast<PulsarDataConsumer>(consumer)->group_consume(
-            queue, filter_event_ids, max_running_time_ms);
+            queue, max_running_time_ms);
     cb(st);
 }
 
