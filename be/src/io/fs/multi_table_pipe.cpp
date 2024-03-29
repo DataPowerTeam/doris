@@ -41,6 +41,7 @@ namespace io {
 
 Status MultiTablePipe::append_with_line_delimiter(const char* data, size_t size) {
     const std::string& table = parse_dst_table(data, size);
+    LOG(INFO) << "table name is : " <<  table;
     if (table.empty()) {
         return Status::InternalError("table name is empty");
     }
@@ -51,6 +52,7 @@ Status MultiTablePipe::append_with_line_delimiter(const char* data, size_t size)
 
 Status MultiTablePipe::append_json(const char* data, size_t size) {
     const std::string& table = parse_dst_table(data, size);
+    LOG(INFO) << "table name is : " <<  table;
     if (table.empty()) {
         return Status::InternalError("table name is empty");
     }
